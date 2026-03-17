@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/bungkus/static/css/main.cf79ffb5.css",
-    "main.js": "/bungkus/static/js/main.16d3165a.js",
-    "static/js/453.3c43e5e0.chunk.js": "/bungkus/static/js/453.3c43e5e0.chunk.js",
-    "index.html": "/bungkus/index.html",
-    "main.cf79ffb5.css.map": "/bungkus/static/css/main.cf79ffb5.css.map",
-    "main.16d3165a.js.map": "/bungkus/static/js/main.16d3165a.js.map",
-    "453.3c43e5e0.chunk.js.map": "/bungkus/static/js/453.3c43e5e0.chunk.js.map"
+    "main.css": "/bungkus-client-dashboard/static/css/main.0034861f.css",
+    "main.js": "/bungkus-client-dashboard/static/js/main.bdd046c2.js",
+    "static/js/453.8510c497.chunk.js": "/bungkus-client-dashboard/static/js/453.8510c497.chunk.js",
+    "index.html": "/bungkus-client-dashboard/index.html",
+    "main.0034861f.css.map": "/bungkus-client-dashboard/static/css/main.0034861f.css.map",
+    "main.bdd046c2.js.map": "/bungkus-client-dashboard/static/js/main.bdd046c2.js.map",
+    "453.8510c497.chunk.js.map": "/bungkus-client-dashboard/static/js/453.8510c497.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.cf79ffb5.css",
-    "static/js/main.16d3165a.js"
+    "static/css/main.0034861f.css",
+    "static/js/main.bdd046c2.js"
   ]
 }
