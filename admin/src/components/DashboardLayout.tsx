@@ -1,312 +1,260 @@
-import React, { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const DashboardLayout: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
-  const { user, logout } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const navigation = [
-    { 
-      name: 'Dashboard', 
-      href: '/dashboard',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-        </svg>
-      )
-    },
-    { 
-      name: 'QR Generator', 
-      href: '/qr-generator',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M8 20h2m-2-4v-4H4v4h4z" />
-        </svg>
-      )
-    },
-    { 
-      name: 'Orders', 
-      href: '/orders',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      )
-    },
-    { 
-      name: 'Clients', 
-      href: '/clients',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      )
-    },
-    { 
-      name: 'Settings', 
-      href: '/settings',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      )
-    },
+    { name: 'Dashboard', href: '/', icon: '🏠', color: 'from-purple-500 to-pink-500' },
+    { name: 'Orders', href: '/orders', icon: '🛍️', color: 'from-orange-500 to-red-500' },
+    { name: 'QR Generator', href: '/qr-generator', icon: '📱', color: 'from-blue-500 to-cyan-500' },
+    { name: 'Clients', href: '/clients', icon: '👥', color: 'from-green-500 to-emerald-500' },
   ];
 
-  useEffect(() => {
-    const darkMode = localStorage.getItem('darkMode') === 'true';
-    setIsDark(darkMode);
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
   const toggleDarkMode = () => {
-    const newDarkMode = !isDark;
-    setIsDark(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode.toString());
-    if (newDarkMode) {
+    setIsDarkMode(!isDarkMode);
+    if (!isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
-    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900 transition-colors duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-dark-50 via-white to-dark-100 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-hero-pattern opacity-5 dark:opacity-[0.02]"></div>
+      <div className="fixed inset-0 bg-hero-pattern opacity-[0.03] dark:opacity-[0.02] pointer-events-none"></div>
       
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div 
-            className="fixed inset-0 bg-dark-600/75 dark:bg-dark-900/75 backdrop-blur-sm animate-fade-in"
-            onClick={() => setSidebarOpen(false)}
-          />
-        </div>
-      )}
+      {/* Animated Background Orbs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <motion.div 
+          className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full filter blur-3xl opacity-10 dark:opacity-5"
+          animate={{
+            x: [0, 100, 0],
+            y: [0, -50, 0],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        <motion.div 
+          className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full filter blur-3xl opacity-10 dark:opacity-5"
+          animate={{
+            x: [0, -100, 0],
+            y: [0, 50, 0],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      </div>
 
-      {/* Mobile sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:hidden ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="h-full bg-white/90 dark:bg-dark-800/90 backdrop-blur-xl shadow-glass dark:shadow-glass-dark">
-          {/* Close button */}
-          <div className="absolute top-4 right-4">
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-xl bg-dark-100/50 dark:bg-dark-700/50 hover:bg-dark-200/50 dark:hover:bg-dark-600/50 transition-colors"
+      <div className="relative flex h-screen">
+        {/* Sidebar */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.aside
+              initial={{ x: -300 }}
+              animate={{ x: 0 }}
+              exit={{ x: -300 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 left-0 z-30 w-64 overflow-y-auto"
             >
-              <svg className="h-5 w-5 text-dark-600 dark:text-dark-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+              <div className="h-full bg-white/80 dark:bg-dark-800/80 backdrop-blur-2xl border-r border-white/20 dark:border-dark-700/20">
+                <div className="p-6">
+                  {/* Logo */}
+                  <motion.div 
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-center space-x-3 mb-8"
+                  >
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                        Bungkus Admin
+                      </h2>
+                      <p className="text-xs text-dark-500 dark:text-dark-400">Dashboard v2.0</p>
+                    </div>
+                  </motion.div>
 
-          {/* Sidebar content */}
-          <div className="flex flex-col h-full">
-            <div className="px-6 py-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center shadow-neon">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+                  {/* Navigation */}
+                  <nav className="space-y-2">
+                    {navigation.map((item, index) => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <motion.div
+                          key={item.name}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                        >
+                          <Link
+                            to={item.href}
+                            className={`
+                              relative flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300
+                              ${isActive 
+                                ? 'text-white' 
+                                : 'text-dark-600 dark:text-dark-400 hover:text-dark-900 dark:hover:text-white'
+                              }
+                            `}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeNav"
+                                className={`absolute inset-0 bg-gradient-to-r ${item.color} rounded-xl shadow-lg`}
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                              />
+                            )}
+                            
+                            <div className={`
+                              relative flex items-center space-x-3 z-10
+                              ${!isActive && 'group-hover:translate-x-1 transition-transform duration-300'}
+                            `}>
+                              <span className={`text-2xl ${isActive ? 'animate-pulse' : ''}`}>
+                                {item.icon}
+                              </span>
+                              <span>{item.name}</span>
+                            </div>
+
+                            {isActive && (
+                              <motion.div
+                                className="absolute right-0 w-1 h-8 bg-white rounded-l-full"
+                                initial={{ scaleY: 0 }}
+                                animate={{ scaleY: 1 }}
+                                transition={{ duration: 0.2 }}
+                              />
+                            )}
+                          </Link>
+                        </motion.div>
+                      );
+                    })}
+                  </nav>
                 </div>
-                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-accent-600 dark:from-primary-400 dark:to-accent-400">
-                  Bungkus Admin
-                </h1>
-              </div>
-            </div>
 
-            <nav className="flex-1 px-4 pb-4">
-              {navigation.map((item, index) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`${
-                    location.pathname === item.href
-                      ? 'bg-gradient-to-r from-primary-500/10 to-accent-500/10 dark:from-primary-500/20 dark:to-accent-500/20 text-primary-700 dark:text-primary-300 shadow-sm'
-                      : 'text-dark-600 dark:text-dark-300 hover:bg-dark-100/50 dark:hover:bg-dark-700/50'
-                  } group flex items-center px-3 py-2.5 mb-1 text-sm font-medium rounded-xl transition-all duration-200`}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <div className={`${
-                    location.pathname === item.href 
-                      ? 'text-primary-600 dark:text-primary-400' 
-                      : 'text-dark-400 dark:text-dark-500 group-hover:text-primary-600 dark:group-hover:text-primary-400'
-                  } mr-3 transition-colors duration-200`}>
-                    {item.icon}
+                {/* Bottom Section */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
+                  {/* Dark Mode Toggle */}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleDarkMode}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-dark-100/50 dark:bg-dark-700/50 rounded-xl transition-colors"
+                  >
+                    <span className="text-sm font-medium text-dark-700 dark:text-dark-300">
+                      Dark Mode
+                    </span>
+                    <div className="relative w-12 h-6 bg-dark-300 dark:bg-dark-600 rounded-full transition-colors">
+                      <motion.div
+                        className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md"
+                        animate={{ x: isDarkMode ? 24 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    </div>
+                  </motion.button>
+
+                  {/* User Profile */}
+                  <div className="p-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/25">
+                        A
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-dark-900 dark:text-white">Admin User</p>
+                        <p className="text-xs text-dark-500 dark:text-dark-400">admin@bungkus.com</p>
+                      </div>
+                    </div>
                   </div>
-                  {item.name}
-                  {location.pathname === item.href && (
-                    <div className="ml-auto w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse"></div>
-                  )}
-                </Link>
-              ))}
-            </nav>
 
-            {/* User section */}
-            <div className="px-4 py-4 border-t border-dark-200/20 dark:border-dark-700/20">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-secondary-400 to-primary-400 rounded-full flex items-center justify-center text-white font-bold">
-                  {user?.email?.charAt(0).toUpperCase()}
+                  {/* Logout Button */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                  >
+                    Logout
+                  </motion.button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark-900 dark:text-white truncate">
-                    {user?.name || user?.email}
-                  </p>
-                  <p className="text-xs text-dark-500 dark:text-dark-400">
-                    {user?.role || 'Admin'}
-                  </p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
 
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex md:flex-shrink-0">
-        <div className="flex flex-col w-72">
-          <div className="flex flex-col h-full bg-white/70 dark:bg-dark-800/70 backdrop-blur-xl border-r border-dark-200/20 dark:border-dark-700/20">
-            {/* Logo section */}
-            <div className="px-6 py-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center shadow-neon animate-pulse-slow">
-                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-accent-600 dark:from-primary-400 dark:to-accent-400">
-                  Bungkus Admin
-                </h1>
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 px-4 pb-4">
-              {navigation.map((item, index) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`${
-                    location.pathname === item.href
-                      ? 'bg-gradient-to-r from-primary-500/10 to-accent-500/10 dark:from-primary-500/20 dark:to-accent-500/20 text-primary-700 dark:text-primary-300 shadow-sm'
-                      : 'text-dark-600 dark:text-dark-300 hover:bg-dark-100/50 dark:hover:bg-dark-700/50'
-                  } group flex items-center px-3 py-2.5 mb-1 text-sm font-medium rounded-xl transition-all duration-200 animate-slide-in`}
-                  style={{ animationDelay: `${index * 50}ms` }}
+        {/* Main Content */}
+        <div className={`flex-1 flex flex-col ${isSidebarOpen ? 'pl-64' : 'pl-0'} transition-all duration-300`}>
+          {/* Top Bar */}
+          <header className="sticky top-0 z-20 bg-white/70 dark:bg-dark-800/70 backdrop-blur-xl border-b border-white/20 dark:border-dark-700/20">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center space-x-4">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
                 >
-                  <div className={`${
-                    location.pathname === item.href 
-                      ? 'text-primary-600 dark:text-primary-400' 
-                      : 'text-dark-400 dark:text-dark-500 group-hover:text-primary-600 dark:group-hover:text-primary-400'
-                  } mr-3 transition-colors duration-200`}>
-                    {item.icon}
-                  </div>
-                  {item.name}
-                  {location.pathname === item.href && (
-                    <div className="ml-auto w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse"></div>
-                  )}
-                </Link>
-              ))}
-            </nav>
-
-            {/* User section */}
-            <div className="px-4 py-4 border-t border-dark-200/20 dark:border-dark-700/20">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-secondary-400 to-primary-400 rounded-full flex items-center justify-center text-white font-bold shadow-md">
-                  {user?.email?.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dark-900 dark:text-white truncate">
-                    {user?.name || user?.email}
-                  </p>
-                  <p className="text-xs text-dark-500 dark:text-dark-400">
-                    {user?.role || 'Admin'}
-                  </p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-300 hover:scale-105"
-                  title="Logout"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content area */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Top bar */}
-        <div className="relative z-10">
-          <div className="bg-white/70 dark:bg-dark-800/70 backdrop-blur-xl border-b border-dark-200/20 dark:border-dark-700/20">
-            <div className="px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex items-center justify-between">
-                {/* Mobile menu button */}
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="md:hidden p-2 rounded-xl bg-dark-100/50 dark:bg-dark-700/50 hover:bg-dark-200/50 dark:hover:bg-dark-600/50 transition-colors"
-                >
-                  <svg className="h-6 w-6 text-dark-600 dark:text-dark-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-6 h-6 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
-                </button>
-
-                {/* Dark mode toggle */}
-                <div className="ml-auto">
-                  <button
-                    onClick={toggleDarkMode}
-                    className="p-2.5 bg-dark-100/50 dark:bg-dark-700/50 rounded-xl hover:bg-dark-200/50 dark:hover:bg-dark-600/50 transition-all duration-300 hover:scale-105"
-                  >
-                    {isDark ? (
-                      <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 text-dark-700" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                      </svg>
-                    )}
-                  </button>
+                </motion.button>
+                
+                <div className="hidden sm:block">
+                  <p className="text-sm text-dark-500 dark:text-dark-400">
+                    {new Date().toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Main content */}
-        <main className="flex-1 relative overflow-y-auto">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center space-x-3">
+                {/* Notifications */}
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="relative p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
+                >
+                  <svg className="w-6 h-6 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                </motion.button>
+
+                {/* Settings */}
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
+                >
+                  <svg className="w-6 h-6 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </motion.button>
+              </div>
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-6 lg:p-8">
               <Outlet />
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );

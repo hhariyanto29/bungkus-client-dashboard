@@ -1,234 +1,387 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Orders: React.FC = () => {
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
   const orders = [
-    { id: '001', client: 'John Doe', items: 3, total: 'Rp 150,000', status: 'pending', date: '2024-03-17', time: '14:30' },
-    { id: '002', client: 'Jane Smith', items: 2, total: 'Rp 85,000', status: 'completed', date: '2024-03-17', time: '13:45' },
-    { id: '003', client: 'Bob Johnson', items: 5, total: 'Rp 225,000', status: 'processing', date: '2024-03-16', time: '10:20' },
-    { id: '004', client: 'Alice Brown', items: 1, total: 'Rp 45,000', status: 'completed', date: '2024-03-16', time: '09:15' },
-    { id: '005', client: 'Charlie Wilson', items: 4, total: 'Rp 180,000', status: 'cancelled', date: '2024-03-15', time: '16:00' },
+    { 
+      id: '001', 
+      client: 'John Doe', 
+      items: [
+        { name: 'Nasi Goreng Special', qty: 2, price: 35000 },
+        { name: 'Es Teh Manis', qty: 2, price: 5000 }
+      ],
+      total: 80000, 
+      status: 'pending', 
+      time: '10:30 AM',
+      date: '17 Mar 2024',
+      table: 'Table 5',
+      notes: 'Extra pedas untuk nasi goreng'
+    },
+    { 
+      id: '002', 
+      client: 'Jane Smith', 
+      items: [
+        { name: 'Ayam Bakar', qty: 1, price: 45000 },
+        { name: 'Sate Ayam', qty: 2, price: 20000 }
+      ],
+      total: 85000, 
+      status: 'processing', 
+      time: '10:15 AM',
+      date: '17 Mar 2024',
+      table: 'Table 12',
+      notes: ''
+    },
+    { 
+      id: '003', 
+      client: 'Bob Johnson', 
+      items: [
+        { name: 'Mie Ayam Special', qty: 3, price: 25000 },
+        { name: 'Jus Alpukat', qty: 3, price: 15000 }
+      ],
+      total: 120000, 
+      status: 'completed', 
+      time: '09:45 AM',
+      date: '17 Mar 2024',
+      table: 'Table 3',
+      notes: 'Mie tidak pakai sayur'
+    },
+    { 
+      id: '004', 
+      client: 'Alice Brown', 
+      items: [
+        { name: 'Soto Ayam', qty: 1, price: 30000 },
+        { name: 'Teh Botol', qty: 1, price: 8000 }
+      ],
+      total: 38000, 
+      status: 'completed', 
+      time: '09:30 AM',
+      date: '17 Mar 2024',
+      table: 'Table 8',
+      notes: ''
+    },
   ];
+
+  const statusFilters = [
+    { value: 'all', label: 'All Orders', count: orders.length },
+    { value: 'pending', label: 'Pending', count: orders.filter(o => o.status === 'pending').length },
+    { value: 'processing', label: 'Processing', count: orders.filter(o => o.status === 'processing').length },
+    { value: 'completed', label: 'Completed', count: orders.filter(o => o.status === 'completed').length },
+  ];
+
+  const filteredOrders = selectedStatus === 'all' 
+    ? orders 
+    : orders.filter(order => order.status === selectedStatus);
 
   const statusStyles = {
     pending: {
-      bg: 'bg-gradient-to-r from-yellow-400/20 to-orange-400/20 dark:from-yellow-600/20 dark:to-orange-600/20',
+      bg: 'bg-gradient-to-r from-yellow-400/20 to-orange-400/20',
       text: 'text-yellow-800 dark:text-yellow-300',
-      dot: 'bg-yellow-500',
+      dot: 'bg-gradient-to-r from-yellow-400 to-orange-400',
+      glow: 'shadow-yellow-400/50',
       icon: (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     },
     processing: {
-      bg: 'bg-gradient-to-r from-blue-400/20 to-cyan-400/20 dark:from-blue-600/20 dark:to-cyan-600/20',
+      bg: 'bg-gradient-to-r from-blue-400/20 to-cyan-400/20',
       text: 'text-blue-800 dark:text-blue-300',
-      dot: 'bg-blue-500',
+      dot: 'bg-gradient-to-r from-blue-400 to-cyan-400',
+      glow: 'shadow-blue-400/50',
       icon: (
-        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       )
     },
     completed: {
-      bg: 'bg-gradient-to-r from-green-400/20 to-emerald-400/20 dark:from-green-600/20 dark:to-emerald-600/20',
+      bg: 'bg-gradient-to-r from-green-400/20 to-emerald-400/20',
       text: 'text-green-800 dark:text-green-300',
-      dot: 'bg-green-500',
+      dot: 'bg-gradient-to-r from-green-400 to-emerald-400',
+      glow: 'shadow-green-400/50',
       icon: (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
-    },
-    cancelled: {
-      bg: 'bg-gradient-to-r from-red-400/20 to-pink-400/20 dark:from-red-600/20 dark:to-pink-600/20',
-      text: 'text-red-800 dark:text-red-300',
-      dot: 'bg-red-500',
-      icon: (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )
     },
   };
 
-  const filteredOrders = filterStatus === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === filterStatus);
-
   return (
-    <div className="space-y-6">
-      <div className="animate-fade-in">
-        <div className="sm:flex sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-accent-600 dark:from-primary-400 dark:to-accent-400">
-              Orders Management
-            </h1>
-            <p className="mt-1 text-sm text-dark-600 dark:text-dark-400">
-              Track and manage all customer orders in real-time
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transform transition-all duration-300 hover:scale-[1.02] hover:shadow-neon"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Order
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Status Filter */}
-      <div className="flex flex-wrap gap-2 animate-slide-in">
-        {['all', 'pending', 'processing', 'completed', 'cancelled'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-              filterStatus === status
-                ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-neon transform scale-105'
-                : 'bg-white/70 dark:bg-dark-800/70 text-dark-700 dark:text-dark-300 hover:bg-dark-100/70 dark:hover:bg-dark-700/70'
-            } backdrop-blur-xl`}
-          >
-            {status === 'all' ? 'All Orders' : status.charAt(0).toUpperCase() + status.slice(1)}
-            {status === 'all' && (
-              <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                {orders.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-      
-      {/* Orders Table */}
-      <div className="bg-white/70 dark:bg-dark-800/70 backdrop-blur-xl rounded-2xl shadow-glass dark:shadow-glass-dark overflow-hidden animate-fade-in">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-dark-200/10 dark:divide-dark-700/10">
-            <thead className="bg-dark-50/50 dark:bg-dark-900/50">
-              <tr>
-                <th scope="col" className="py-3.5 pl-6 pr-3 text-left text-xs font-semibold text-dark-900 dark:text-white uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-dark-900 dark:text-white uppercase tracking-wider">
-                  Client
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-dark-900 dark:text-white uppercase tracking-wider">
-                  Items
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-dark-900 dark:text-white uppercase tracking-wider">
-                  Total
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-dark-900 dark:text-white uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-xs font-semibold text-dark-900 dark:text-white uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th scope="col" className="relative py-3.5 pl-3 pr-6">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dark-200/10 dark:divide-dark-700/10">
-              {filteredOrders.map((order, index) => (
-                <tr 
-                  key={order.id}
-                  className="hover:bg-dark-50/50 dark:hover:bg-dark-900/50 transition-all duration-200 animate-slide-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <td className="whitespace-nowrap py-4 pl-6 pr-3 text-sm">
-                    <span className="font-semibold text-dark-900 dark:text-white">#{order.id}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-700 dark:text-dark-300">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-400 to-accent-400 flex items-center justify-center text-white text-sm font-bold shadow-md">
-                        {order.client.charAt(0)}
-                      </div>
-                      <div className="ml-3">
-                        <p className="font-medium text-dark-900 dark:text-white">{order.client}</p>
-                        <p className="text-xs text-dark-500 dark:text-dark-400">Customer ID: C{order.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
-                    <div className="flex items-center">
-                      <svg className="w-4 h-4 mr-1.5 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                      </svg>
-                      <span className="font-medium text-dark-700 dark:text-dark-300">{order.items}</span>
-                      <span className="ml-1 text-dark-500 dark:text-dark-400">items</span>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
-                    <span className="font-bold text-dark-900 dark:text-white">{order.total}</span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
-                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusStyles[order.status as keyof typeof statusStyles].bg} ${statusStyles[order.status as keyof typeof statusStyles].text}`}>
-                      <span className="mr-1.5">{statusStyles[order.status as keyof typeof statusStyles].icon}</span>
-                      {order.status}
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-500 dark:text-dark-400">
-                    <div className="flex items-center">
-                      <svg className="w-4 h-4 mr-1.5 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>{order.date}</span>
-                      <span className="mx-1">•</span>
-                      <span>{order.time}</span>
-                    </div>
-                  </td>
-                  <td className="relative whitespace-nowrap py-4 pl-3 pr-6 text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 text-primary-600 dark:text-primary-400 transition-colors">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      </button>
-                      <button className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/20 text-accent-600 dark:text-accent-400 transition-colors">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative"
+      >
+        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400">
+          Orders Management
+        </h1>
+        <p className="mt-2 text-dark-600 dark:text-dark-400">
+          Track and manage all your restaurant orders in real-time
+        </p>
         
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-dark-200/20 dark:border-dark-700/20">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-dark-600 dark:text-dark-400">
-              Showing <span className="font-medium">{filteredOrders.length}</span> of <span className="font-medium">{orders.length}</span> results
-            </p>
-            <div className="flex items-center space-x-2">
-              <button className="px-3 py-1.5 text-sm bg-white/50 dark:bg-dark-700/50 rounded-lg hover:bg-dark-100/50 dark:hover:bg-dark-600/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                Previous
-              </button>
-              <button className="px-3 py-1.5 text-sm bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-                1
-              </button>
-              <button className="px-3 py-1.5 text-sm bg-white/50 dark:bg-dark-700/50 rounded-lg hover:bg-dark-100/50 dark:hover:bg-dark-600/50 transition-colors">
-                2
-              </button>
-              <button className="px-3 py-1.5 text-sm bg-white/50 dark:bg-dark-700/50 rounded-lg hover:bg-dark-100/50 dark:hover:bg-dark-600/50 transition-colors">
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* Decorative element */}
+        <div className="absolute -top-8 -right-8 w-40 h-40 bg-gradient-to-br from-orange-500 to-red-500 rounded-full filter blur-3xl opacity-20 animate-float"></div>
+      </motion.div>
+
+      {/* Status Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="flex flex-wrap gap-4"
+      >
+        {statusFilters.map((filter, index) => (
+          <motion.button
+            key={filter.value}
+            onClick={() => setSelectedStatus(filter.value)}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`relative px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+              selectedStatus === filter.value
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
+                : 'bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl border border-white/20 dark:border-dark-700/20 text-dark-700 dark:text-dark-300 hover:shadow-lg'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              {filter.label}
+              <span className={`inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full ${
+                selectedStatus === filter.value
+                  ? 'bg-white/20 text-white'
+                  : 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-700 dark:text-purple-300'
+              }`}>
+                {filter.count}
+              </span>
+            </span>
+          </motion.button>
+        ))}
+      </motion.div>
+
+      {/* Orders Grid */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+      >
+        <AnimatePresence mode="popLayout">
+          {filteredOrders.map((order, index) => (
+            <motion.div
+              key={order.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              whileHover={{ scale: 1.02 }}
+              className="relative group cursor-pointer"
+              onClick={() => setSelectedOrder(order)}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${
+                order.status === 'pending' ? 'from-yellow-500 to-orange-500' :
+                order.status === 'processing' ? 'from-blue-500 to-cyan-500' :
+                'from-green-500 to-emerald-500'
+              } rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300`}></div>
+              
+              <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-dark-700/20 p-6 space-y-4">
+                {/* Order Header */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-dark-900 dark:text-white">
+                      Order #{order.id}
+                    </h3>
+                    <p className="text-sm text-dark-500 dark:text-dark-400">
+                      {order.date} • {order.time}
+                    </p>
+                  </div>
+                  <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[order.status as keyof typeof statusStyles].bg} ${statusStyles[order.status as keyof typeof statusStyles].text} backdrop-blur-xl`}>
+                    <span className={`w-2 h-2 rounded-full ${statusStyles[order.status as keyof typeof statusStyles].dot} mr-2 shadow-md ${statusStyles[order.status as keyof typeof statusStyles].glow}`}></span>
+                    {order.status}
+                  </div>
+                </div>
+
+                {/* Client Info */}
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/25">
+                    {order.client.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-dark-900 dark:text-white">{order.client}</p>
+                    <p className="text-sm text-dark-500 dark:text-dark-400">{order.table}</p>
+                  </div>
+                </div>
+
+                {/* Order Items */}
+                <div className="space-y-2">
+                  {order.items.slice(0, 2).map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm">
+                      <span className="text-dark-700 dark:text-dark-300">
+                        {item.qty}x {item.name}
+                      </span>
+                      <span className="text-dark-900 dark:text-white font-semibold">
+                        Rp {item.price.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  ))}
+                  {order.items.length > 2 && (
+                    <p className="text-sm text-dark-500 dark:text-dark-400">
+                      +{order.items.length - 2} more items
+                    </p>
+                  )}
+                </div>
+
+                {/* Order Total */}
+                <div className="pt-4 border-t border-dark-200/20 dark:border-dark-700/20">
+                  <div className="flex justify-between items-center">
+                    <p className="text-dark-600 dark:text-dark-400">Total</p>
+                    <p className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                      Rp {order.total.toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Icons */}
+                <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl shadow-lg shadow-purple-500/25"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 text-white rounded-xl shadow-lg shadow-green-500/25"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Order Detail Modal */}
+      <AnimatePresence>
+        {selectedOrder && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              onClick={() => setSelectedOrder(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-lg mx-auto z-50"
+            >
+              <div className="bg-white/90 dark:bg-dark-800/90 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-dark-700/20 p-8 shadow-2xl">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                    Order #{selectedOrder.id}
+                  </h3>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setSelectedOrder(null)}
+                    className="p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </motion.button>
+                </div>
+
+                {/* Order Details */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/25">
+                        {selectedOrder.client.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-dark-900 dark:text-white">{selectedOrder.client}</p>
+                        <p className="text-sm text-dark-500 dark:text-dark-400">{selectedOrder.table}</p>
+                      </div>
+                    </div>
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${statusStyles[selectedOrder.status as keyof typeof statusStyles].bg} ${statusStyles[selectedOrder.status as keyof typeof statusStyles].text}`}>
+                      {statusStyles[selectedOrder.status as keyof typeof statusStyles].icon}
+                      <span className="ml-2">{selectedOrder.status}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-dark-900 dark:text-white">Order Items</h4>
+                    {selectedOrder.items.map((item: any, idx: number) => (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-dark-50/50 dark:bg-dark-900/50 rounded-xl">
+                        <div>
+                          <p className="font-medium text-dark-900 dark:text-white">{item.name}</p>
+                          <p className="text-sm text-dark-500 dark:text-dark-400">Qty: {item.qty}</p>
+                        </div>
+                        <p className="font-semibold text-dark-900 dark:text-white">
+                          Rp {(item.qty * item.price).toLocaleString('id-ID')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {selectedOrder.notes && (
+                    <div className="p-4 bg-yellow-50/50 dark:bg-yellow-900/20 rounded-xl">
+                      <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-1">Notes</p>
+                      <p className="text-sm text-dark-700 dark:text-dark-300">{selectedOrder.notes}</p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-4 border-t border-dark-200/20 dark:border-dark-700/20">
+                    <p className="text-lg text-dark-600 dark:text-dark-400">Total Amount</p>
+                    <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
+                      Rp {selectedOrder.total.toLocaleString('id-ID')}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25"
+                    >
+                      Process Order
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 py-3 px-4 bg-dark-100/50 dark:bg-dark-700/50 text-dark-700 dark:text-dark-300 font-semibold rounded-xl border border-dark-300/20 dark:border-dark-600/20"
+                      onClick={() => setSelectedOrder(null)}
+                    >
+                      Cancel
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
