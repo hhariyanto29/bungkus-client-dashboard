@@ -1,353 +1,384 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
+import { qrAPI, clientsAPI } from '../services/api';
+import { toast } from 'react-hot-toast';
 
 const QRGenerator: React.FC = () => {
-  const [formData, setFormData] = useState({
-    clientName: '',
-    tableNumber: '',
-    validUntil: '',
-  });
-  const [generatedQRs, setGeneratedQRs] = useState<Array<{
-    id: number;
-    client: string;
-    table: string;
-    created: string;
-    status: 'active' | 'expired';
-  }>>([
-    { id: 1, client: 'Restaurant ABC', table: '12', created: '2024-03-17 10:30 AM', status: 'active' },
-    { id: 2, client: 'Cafe XYZ', table: '5', created: '2024-03-17 09:15 AM', status: 'active' },
-    { id: 3, client: 'Bistro 123', table: '8', created: '2024-03-17 08:45 AM', status: 'expired' },
-  ]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [qrCodes, setQrCodes] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState('');
+  const [tableNumbers, setTableNumbers] = useState('');
+  const [validUntil, setValidUntil] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    expired: 0,
+    used: 0
+  });
 
-  const handleGenerate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsGenerating(true);
-    
-    // Simulate QR generation
-    setTimeout(() => {
-      const newQR: {
-        id: number;
-        client: string;
-        table: string;
-        created: string;
-        status: 'active' | 'expired';
-      } = {
-        id: generatedQRs.length + 1,
-        client: formData.clientName,
-        table: formData.tableNumber,
-        created: new Date().toLocaleString(),
-        status: 'active' as const,
-      };
-      setGeneratedQRs([newQR, ...generatedQRs]);
-      setIsGenerating(false);
-      setShowSuccess(true);
-      setFormData({ clientName: '', tableNumber: '', validUntil: '' });
+  // Fetch clients and QR codes
+  useEffect(() => {
+    fetchClients();
+    fetchQrCodes();
+    fetchStats();
+  }, []);
+
+  const fetchClients = async () => {
+    try {
+      const response = await clientsAPI.getAll({ status: 'active' });
       
-      setTimeout(() => setShowSuccess(false), 3000);
-    }, 1500);
-  };
-
-  const statusStyles = {
-    active: {
-      bg: 'bg-gradient-to-r from-green-400/20 to-emerald-400/20',
-      text: 'text-green-800 dark:text-green-300',
-      dot: 'bg-gradient-to-r from-green-400 to-emerald-400',
-      glow: 'shadow-green-400/50'
-    },
-    expired: {
-      bg: 'bg-gradient-to-r from-red-400/20 to-pink-400/20',
-      text: 'text-red-800 dark:text-red-300',
-      dot: 'bg-gradient-to-r from-red-400 to-pink-400',
-      glow: 'shadow-red-400/50'
+      if (response.data.success) {
+        setClients(response.data.data.clients || []);
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      toast.error('Failed to fetch clients');
     }
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative"
-      >
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400">
-          QR Code Generator
-        </h1>
-        <p className="mt-2 text-dark-600 dark:text-dark-400">
-          Generate unique QR codes for your restaurant tables
-        </p>
-        
-        {/* Decorative element */}
-        <div className="absolute -top-8 -right-8 w-40 h-40 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full filter blur-3xl opacity-20 animate-float"></div>
-      </motion.div>
+  const fetchQrCodes = async () => {
+    setIsLoading(true);
+    try {
+      const response = await qrAPI.getAll({ limit: 20, orderBy: 'created_at', order: 'desc' });
+      
+      if (response.data.success) {
+        setQrCodes(response.data.data.qr_codes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching QR codes:', error);
+      toast.error('Failed to fetch QR codes');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  const fetchStats = async () => {
+    try {
+      const response = await qrAPI.getStats();
+      
+      if (response.data.success) {
+        const data = response.data.data;
+        setStats({
+          total: data.total_codes || 0,
+          active: data.active_codes || 0,
+          expired: data.expired_codes || 0,
+          used: data.used_codes || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const generateQRCodes = async () => {
+    if (!selectedClient || !tableNumbers) {
+      toast.error('Please select a client and enter table numbers');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const tableArray = tableNumbers.split(',').map(t => t.trim()).filter(t => t);
+      
+      if (tableArray.length === 1) {
+        // Single QR code
+        const response = await qrAPI.generate({
+          client_id: parseInt(selectedClient),
+          table_number: tableArray[0],
+          valid_until: validUntil || undefined
+        });
+        
+        if (response.data.success) {
+          toast.success('QR code generated successfully');
+        }
+      } else {
+        // Bulk generation
+        const response = await qrAPI.bulkGenerate(
+          parseInt(selectedClient),
+          tableArray,
+          validUntil || undefined
+        );
+        
+        if (response.data.success) {
+          toast.success(`${tableArray.length} QR codes generated successfully`);
+        }
+      }
+
+      // Refresh data
+      fetchQrCodes();
+      fetchStats();
+      
+      // Reset form
+      setSelectedClient('');
+      setTableNumbers('');
+      setValidUntil('');
+    } catch (error) {
+      console.error('Error generating QR codes:', error);
+      toast.error('Failed to generate QR codes');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const updateQRStatus = async (id: number, status: string) => {
+    try {
+      const response = await qrAPI.updateStatus(id, status);
+      
+      if (response.data.success) {
+        toast.success(`QR code ${status}`);
+        fetchQrCodes();
+        fetchStats();
+      }
+    } catch (error) {
+      console.error('Error updating QR status:', error);
+      toast.error('Failed to update QR code status');
+    }
+  };
+
+  const downloadQR = (qrData: string, clientName: string, tableNumber: string) => {
+    const svg = document.getElementById(`qr-${qrData}`)?.querySelector('svg');
+    if (svg) {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        const pngFile = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `QR-${clientName}-Table-${tableNumber}.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-5xl font-bold text-white mb-8 text-center"
+        >
+          QR Code Generator
+        </motion.h1>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20"
+          >
+            <h3 className="text-gray-300 text-sm mb-2">Total QR Codes</h3>
+            <p className="text-3xl font-bold text-white">{stats.total}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="bg-green-500/20 backdrop-blur-xl rounded-2xl p-6 border border-green-500/30"
+          >
+            <h3 className="text-green-200 text-sm mb-2">Active</h3>
+            <p className="text-3xl font-bold text-green-300">{stats.active}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="bg-blue-500/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-500/30"
+          >
+            <h3 className="text-blue-200 text-sm mb-2">Used Today</h3>
+            <p className="text-3xl font-bold text-blue-300">{stats.used}</p>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="bg-red-500/20 backdrop-blur-xl rounded-2xl p-6 border border-red-500/30"
+          >
+            <h3 className="text-red-200 text-sm mb-2">Expired</h3>
+            <p className="text-3xl font-bold text-red-300">{stats.expired}</p>
+          </motion.div>
+        </div>
+
         {/* QR Generator Form */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="relative"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 mb-8 border border-white/20"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-3xl blur-2xl"></div>
-          <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-dark-700/20 p-8">
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="text-center mb-8"
-            >
-              <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white mb-4 shadow-lg shadow-purple-500/25">
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M8 20h2m-2-4v-4H4v4h4z" />
+          <h2 className="text-2xl font-bold text-white mb-6">Generate New QR Code</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Select Client
+              </label>
+              <select
+                value={selectedClient}
+                onChange={(e) => setSelectedClient(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+              >
+                <option value="" className="bg-gray-900">Select a client...</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id} className="bg-gray-900">
+                    {client.restaurant_name} - {client.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Table Numbers
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., 1, 2, 3 or just 5"
+                value={tableNumbers}
+                onChange={(e) => setTableNumbers(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Valid Until (Optional)
+              </label>
+              <input
+                type="date"
+                value={validUntil}
+                onChange={(e) => setValidUntil(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={generateQRCodes}
+            disabled={isGenerating || !selectedClient || !tableNumbers}
+            className="mt-6 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl font-medium transition-all flex items-center justify-center"
+          >
+            {isGenerating ? (
+              <span className="flex items-center">
+                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
-                Create New QR Code
-              </h2>
-            </motion.div>
+                Generating...
+              </span>
+            ) : (
+              'Generate QR Code(s)'
+            )}
+          </button>
+        </motion.div>
 
-            <form onSubmit={handleGenerate} className="space-y-6">
+        {/* Generated QR Codes */}
+        <h2 className="text-2xl font-bold text-white mb-6">Recent QR Codes</h2>
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+          </div>
+        ) : qrCodes.length === 0 ? (
+          <div className="text-center text-gray-400 py-16 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10">
+            <p className="text-xl">No QR codes generated yet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {qrCodes.map((qr, index) => (
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-              >
-                <label htmlFor="clientName" className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-2">
-                  Client/Restaurant Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    id="clientName"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                    className="block w-full pl-10 pr-3 py-3 bg-white/50 dark:bg-dark-900/50 border border-dark-300/20 dark:border-dark-600/20 rounded-xl text-dark-900 dark:text-white placeholder-dark-400 backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-                    placeholder="Enter client name"
-                    required
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.3 }}
-              >
-                <label htmlFor="tableNumber" className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-2">
-                  Table Number
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    id="tableNumber"
-                    value={formData.tableNumber}
-                    onChange={(e) => setFormData({ ...formData, tableNumber: e.target.value })}
-                    className="block w-full pl-10 pr-3 py-3 bg-white/50 dark:bg-dark-900/50 border border-dark-300/20 dark:border-dark-600/20 rounded-xl text-dark-900 dark:text-white placeholder-dark-400 backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-                    placeholder="e.g., Table 12"
-                    required
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.4 }}
-              >
-                <label htmlFor="validUntil" className="block text-sm font-semibold text-dark-700 dark:text-dark-300 mb-2">
-                  Valid Until (Optional)
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="datetime-local"
-                    id="validUntil"
-                    value={formData.validUntil}
-                    onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                    className="block w-full pl-10 pr-3 py-3 bg-white/50 dark:bg-dark-900/50 border border-dark-300/20 dark:border-dark-600/20 rounded-xl text-dark-900 dark:text-white placeholder-dark-400 backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
+                key={qr.id}
+                id={`qr-${qr.qr_data}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.5 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all"
               >
-                <button
-                  type="submit"
-                  disabled={isGenerating}
-                  className="w-full py-4 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transform transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isGenerating ? (
-                    <div className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Generating QR Code...
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center">
-                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Generate QR Code
-                    </div>
-                  )}
-                </button>
-              </motion.div>
-            </form>
-          </div>
-        </motion.div>
-
-        {/* QR Preview */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="relative"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-3xl blur-2xl"></div>
-          <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-dark-700/20 p-8 h-full flex flex-col items-center justify-center">
-            <motion.div
-              animate={{ 
-                rotateY: [0, 180, 360],
-              }}
-              transition={{ 
-                duration: 20,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-              className="mb-6"
-            >
-              <div className="w-48 h-48 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-purple-500/30">
-                <div className="w-40 h-40 bg-white rounded-2xl p-4">
-                  {/* QR Code Placeholder */}
-                  <div className="w-full h-full bg-gradient-to-br from-dark-900 to-dark-700 rounded-lg"></div>
+                <div className="bg-white rounded-xl p-4 mb-4">
+                  <QRCodeSVG
+                    value={qr.qr_data}
+                    size={200}
+                    className="w-full h-auto"
+                  />
                 </div>
-              </div>
-            </motion.div>
-            <p className="text-center text-dark-600 dark:text-dark-400 mb-2">
-              QR Code Preview
-            </p>
-            <p className="text-center text-sm text-dark-500 dark:text-dark-500">
-              Your QR code will appear here
-            </p>
-          </div>
-        </motion.div>
-      </div>
+                
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white">{qr.restaurant_name}</h3>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Table {qr.table_number}</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                      qr.status === 'active'
+                        ? 'bg-green-500/20 text-green-300 border-green-500/30'
+                        : qr.status === 'used'
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                        : 'bg-red-500/20 text-red-300 border-red-500/30'
+                    }`}>
+                      {qr.status}
+                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-gray-400">
+                    <p>Created: {formatDate(qr.created_at)}</p>
+                    {qr.valid_until && (
+                      <p>Expires: {formatDate(qr.valid_until)}</p>
+                    )}
+                    {qr.last_used && (
+                      <p>Last used: {formatDate(qr.last_used)}</p>
+                    )}
+                  </div>
 
-      {/* Success Notification */}
-      <AnimatePresence>
-        {showSuccess && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-8 right-8 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-green-500/30 flex items-center"
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            QR Code generated successfully!
-          </motion.div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => downloadQR(qr.qr_data, qr.restaurant_name, qr.table_number)}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download
+                    </button>
+                    {qr.status === 'active' && (
+                      <button
+                        onClick={() => updateQRStatus(qr.id, 'deactivated')}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Deactivate
+                      </button>
+                    )}
+                    {qr.status === 'deactivated' && (
+                      <button
+                        onClick={() => updateQRStatus(qr.id, 'active')}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Reactivate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         )}
-      </AnimatePresence>
-
-      {/* Recent QR Codes */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3 }}
-        className="relative"
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-3xl blur-2xl"></div>
-        <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-dark-700/20 overflow-hidden">
-          <div className="p-6 border-b border-dark-200/10 dark:border-dark-700/10 bg-gradient-to-r from-transparent via-white/5 to-transparent">
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400">
-              Recently Generated QR Codes
-            </h2>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gradient-to-r from-dark-50/30 to-dark-100/30 dark:from-dark-900/30 dark:to-dark-800/30">
-                <tr>
-                  <th className="py-4 pl-6 pr-3 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Client
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Table
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Created
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Status
-                  </th>
-                  <th className="relative py-4 pl-3 pr-6">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-200/5 dark:divide-dark-700/5">
-                {generatedQRs.map((qr, index) => (
-                  <motion.tr
-                    key={qr.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-cyan-50/50 dark:hover:from-blue-900/20 dark:hover:to-cyan-900/20 transition-all duration-300"
-                  >
-                    <td className="whitespace-nowrap py-4 pl-6 pr-3 text-sm font-medium text-dark-900 dark:text-white">
-                      {qr.client}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-700 dark:text-dark-300">
-                      {qr.table}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-700 dark:text-dark-300">
-                      {qr.created}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[qr.status].bg} ${statusStyles[qr.status].text} backdrop-blur-xl`}>
-                        <span className={`w-2 h-2 rounded-full ${statusStyles[qr.status].dot} mr-2 shadow-md ${statusStyles[qr.status].glow}`}></span>
-                        {qr.status}
-                      </div>
-                    </td>
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-6 text-right text-sm font-medium">
-                      <button className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 font-semibold mr-3">
-                        Download
-                      </button>
-                      <button className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold">
-                        View
-                      </button>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN || ['http://localhost:3000', 'http://localhost:3004'],
   credentials: true
 }));
 app.use(express.json());
@@ -40,15 +40,22 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes (to be implemented)
+// API Routes
+app.use('/api/auth', require('./src/routes/authRoutes'));
+app.use('/api/clients', require('./src/routes/clientRoutes'));
 app.use('/api/orders', require('./src/routes/orderRoutes'));
 app.use('/api/qr', require('./src/routes/qrRoutes'));
-app.use('/api/invoices', require('./src/routes/invoiceRoutes'));
-app.use('/api/shipments', require('./src/routes/shipmentRoutes'));
-app.use('/api/admin', require('./src/routes/adminRoutes'));
 
-// QR Access Portal Route (public access via QR)
-app.use('/access', require('./src/routes/accessRoutes'));
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'Bungkus Backend API',
+    version: '1.0.0',
+    database: 'SQLite'
+  });
+});
 
 // 404 handler
 app.use('*', (req, res) => {

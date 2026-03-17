@@ -1,200 +1,296 @@
-# Bungkus Client Dashboard
+# 🍱 Bungkus Admin Dashboard
 
-Custom packaging system with confidential QR code access for order management.
+Modern admin dashboard for restaurant management with QR code ordering system. Built with React 19, TypeScript, Tailwind CSS, and Express.js backend.
 
-## Features
+## ✨ Features
 
-- **QR Confidential Access**: Unique QR code per order provides secure access without login
-- **Order Status Tracking**: Real-time status updates (Deal/Unpaid/DP/Lunas/Completed)
-- **Shipment Tracking**: Integration with JNE, TIKI, POS Indonesia, and custom couriers
-- **Invoice Management**: Automated PDF invoice generation with tax calculation
-- **Tax Invoice (Faktur Pajak)**: Integration with E-Faktur API
-- **Order History**: Complete timeline view of order progress and communications
+### 🎨 Modern Design
+- **Glassmorphism UI** with gradient backgrounds
+- **Dark/Light mode** toggle
+- **Smooth animations** with Framer Motion
+- **Responsive design** for all devices
+- **Real-time data** updates
 
-## System Architecture
+### 🔐 Authentication & Security
+- **JWT-based authentication**
+- **Protected routes** with role-based access
+- **Secure API endpoints**
+- **Token refresh** mechanism
 
+### 📊 Dashboard
+- **Real-time statistics** and analytics
+- **Order management** with status tracking
+- **Client directory** with card layout
+- **QR code generator** with bulk generation
+- **Revenue tracking** and reporting
+
+### 🛠️ Technical Features
+- **TypeScript** for type safety
+- **React Query** for data fetching
+- **Axios** for API calls
+- **SQLite database** with automatic migrations
+- **RESTful API** with proper error handling
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 16 or higher
+- npm or yarn
+
+### Installation & Running
+
+#### Option 1: Using Start Script (Recommended)
+```bash
+# Make script executable
+chmod +x start.sh
+
+# Run the application
+./start.sh
 ```
-Customer Order → Generate Unique QR → Portal Access → Secure Dashboard
+
+#### Option 2: Manual Setup
+```bash
+# 1. Clone and navigate to project
+cd bungkus-client-dashboard
+
+# 2. Start Backend
+cd backend
+npm install
+npm run dev
+
+# 3. Start Frontend (in new terminal)
+cd admin
+npm install
+npm start
 ```
 
-### QR Structure
-```
-https://portal.domain.com/access/{order_id}/{secret_hash}
-```
+### Access URLs
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:3001
+- **Health Check**: http://localhost:3001/health
 
-## Tech Stack
+### Default Admin Credentials
+- **Email**: admin@bungkus.com
+- **Password**: admin123
 
-### Backend
-- Node.js + Express
-- PostgreSQL / SQLite
-- Redis (caching & sessions)
-- PDFKit (invoice generation)
-- JWT (QR authentication)
-
-### Frontend
-- React.js
-- Tailwind CSS
-- QRCode.js
-- Chart.js (analytics)
-- React Router
-
-### Third-party Integrations
-- Midtrans/QRIS (payments)
-- RajaOngkir (shipping rates)
-- E-Faktur API (tax invoices)
-- WhatsApp API (notifications)
-- JNE/TIKI/POS API (tracking)
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 bungkus-client-dashboard/
-├── backend/
+├── admin/                    # Frontend React App
 │   ├── src/
-│   │   ├── controllers/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   └── utils/
-│   ├── package.json
-│   └── server.js
-├── frontend/
+│   │   ├── components/      # Reusable components
+│   │   ├── contexts/       # React contexts (Auth, Theme)
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── pages/          # Page components
+│   │   ├── services/       # API services
+│   │   └── styles/         # Global styles
+│   └── package.json
+│
+├── backend/                 # Express.js Backend
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── hooks/
-│   │   └── utils/
-│   ├── package.json
-│   └── public/
-├── admin/
-│   └── (admin dashboard)
-├── docs/
-│   └── (documentation)
-└── docker/
-    └── (docker configurations)
+│   │   ├── config/         # Database config
+│   │   ├── middleware/     # Auth middleware
+│   │   ├── routes/         # API routes
+│   │   └── utils/          # Utility functions
+│   ├── bungkus.db          # SQLite database
+│   └── package.json
+│
+├── start.sh                # Startup script
+└── README.md              # This file
 ```
 
-## Getting Started
+## 🛠️ Technology Stack
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL 14+ (or SQLite for development)
-- Git
+### Frontend
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Framer Motion** - Animations
+- **React Query** - Data fetching
+- **React Router** - Navigation
+- **Lucide React** - Icons
 
-### Installation
+### Backend
+- **Express.js** - Web framework
+- **SQLite3** - Database
+- **JWT** - Authentication
+- **CORS** - Cross-origin support
+- **QRCode** - QR generation
 
-1. Clone the repository:
+## 📡 API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/verify` - Verify token
+- `POST /api/auth/logout` - User logout
+- `GET /api/auth/profile` - Get user profile
+
+### Clients
+- `GET /api/clients` - Get all clients
+- `GET /api/clients/:id` - Get client by ID
+- `POST /api/clients` - Create new client
+- `PUT /api/clients/:id` - Update client
+- `DELETE /api/clients/:id` - Delete client
+
+### Orders
+- `GET /api/orders` - Get all orders
+- `GET /api/orders/:id` - Get order by ID
+- `POST /api/orders` - Create new order
+- `PUT /api/orders/:id` - Update order
+- `PATCH /api/orders/:id/status` - Update order status
+
+### QR Codes
+- `POST /api/qr/generate` - Generate QR code
+- `GET /api/qr` - Get all QR codes
+- `POST /api/qr/validate` - Validate QR code
+- `POST /api/qr/bulk-generate` - Bulk generate QR codes
+
+## 🎨 Design System
+
+### Colors
+- **Primary**: Purple (#8B5CF6) to Pink (#EC4899) gradient
+- **Secondary**: Blue (#3B82F6) to Cyan (#06B6D4) gradient
+- **Success**: Green (#10B981) to Emerald (#059669) gradient
+- **Warning**: Orange (#F59E0B) to Red (#EF4444) gradient
+- **Dark Mode**: Dark gray (#1F2937) background
+
+### Typography
+- **Font Family**: Inter (via Tailwind CSS)
+- **Headings**: Bold with gradient text
+- **Body**: Regular weight with good contrast
+
+### Components
+- **Cards**: Glassmorphism with blur effects
+- **Buttons**: Gradient backgrounds with hover effects
+- **Tables**: Modern design with status indicators
+- **Forms**: Clean design with validation
+
+## 🔧 Development
+
+### Frontend Development
 ```bash
-git clone https://github.com/hhariyanto29/bungkus-client-dashboard.git
-cd bungkus-client-dashboard
+cd admin
+npm start          # Start development server
+npm run build      # Build for production
+npm test           # Run tests
+npm run lint       # Run linter
 ```
 
-2. Install backend dependencies:
+### Backend Development
 ```bash
 cd backend
-npm install
+npm run dev        # Start development server
+npm start          # Start production server
+npm run test       # Run tests
 ```
 
-3. Install frontend dependencies:
+### Database
+The application uses SQLite3 with automatic table creation. The database file is located at `backend/bungkus.db`.
+
+To reset the database:
 ```bash
-cd ../frontend
-npm install
+rm backend/bungkus.db
+npm run dev        # Tables will be recreated automatically
 ```
 
-4. Set up environment variables:
+## 📱 Pages
+
+### 1. Login Page
+- Modern authentication form
+- Error handling and validation
+- Remember me functionality
+
+### 2. Dashboard
+- Real-time statistics cards
+- Recent orders table
+- Quick action buttons
+- Revenue charts
+
+### 3. QR Generator
+- QR code generation form
+- Bulk QR generation
+- QR code preview and download
+- QR code management table
+
+### 4. Orders Management
+- Order listing with filters
+- Order status management
+- Order creation and editing
+- Order details view
+
+### 5. Clients Directory
+- Client cards with details
+- Client search and filtering
+- Client statistics
+- Client management
+
+## 🔒 Security Features
+
+- **JWT Authentication** with 24-hour expiry
+- **Password hashing** (in production use bcrypt)
+- **Protected API endpoints**
+- **CORS configuration**
+- **Input validation** and sanitization
+- **SQL injection prevention**
+
+## 🚀 Deployment
+
+### Frontend Deployment (GitHub Pages)
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
+cd admin
+npm run build
+npm run deploy
 ```
 
-5. Run the development servers:
-```bash
-# Backend (port 3001)
-cd backend && npm run dev
+### Backend Deployment
+1. Set environment variables in production
+2. Use PM2 or similar process manager
+3. Configure reverse proxy (Nginx)
+4. Set up SSL certificate
 
-# Frontend (port 3000)
-cd frontend && npm start
+### Environment Variables
+Create `.env` files in both `admin/` and `backend/` directories:
+
+**Backend (.env)**
+```env
+PORT=3001
+JWT_SECRET=your-secret-key
+NODE_ENV=production
+CORS_ORIGIN=https://yourdomain.com
 ```
 
-## Development Phases
-
-### Phase 1: Core MVP (2-3 weeks)
-- QR generation system
-- Basic portal with order status
-- Admin dashboard
-- Database design
-
-### Phase 2: Essential Features (1-2 weeks)
-- Invoice generation (PDF)
-- Tracking integration
-- Payment gateway integration
-- Enhanced security
-
-### Phase 3: Polish & Deployment (1 week)
-- Mobile responsiveness
-- Performance optimization
-- Production deployment
-- Documentation
-
-## API Documentation
-
-### QR Access Endpoint
-```
-GET /api/access/:orderId/:hash
-```
-Returns order details for valid QR code access.
-
-### Order Status
-```
-GET /api/orders/:orderId/status
-```
-Returns current order status and timeline.
-
-### Invoice Generation
-```
-POST /api/orders/:orderId/invoice
-```
-Generates and returns PDF invoice.
-
-## Security Features
-
-- 256-bit encryption for QR hash
-- QR expiration (default: 30 days)
-- Rate limiting (50 accesses/day per QR)
-- IP logging for security audit
-- HTTPS enforcement
-- CORS configuration
-
-## Deployment
-
-### Option 1: Vercel + Railway
-- Frontend: Vercel
-- Backend: Railway
-- Database: Railway PostgreSQL
-
-### Option 2: Docker
-```bash
-docker-compose up -d
+**Frontend (.env)**
+```env
+REACT_APP_API_URL=https://api.yourdomain.com
 ```
 
-### Option 3: Manual
-- Nginx reverse proxy
-- PM2 process management
-- SSL via Let's Encrypt
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Commit your changes
 4. Push to the branch
-5. Create a Pull Request
+5. Open a Pull Request
 
-## License
+## 📄 License
 
-Proprietary - All rights reserved.
+MIT License - see LICENSE file for details
 
-## Contact
+## 🙏 Acknowledgments
 
-For questions or support, contact the development team.
+- Design inspiration from modern UI trends
+- Icons from Lucide React
+- Animations from Framer Motion
+- Styling with Tailwind CSS
+
+## 📞 Support
+
+For issues and questions:
+1. Check the [Issues](https://github.com/yourusername/bungkus-admin/issues) page
+2. Create a new issue with detailed description
+3. Email: support@bungkus.com
+
+---
+
+**Made with ❤️ for restaurant owners and managers**
