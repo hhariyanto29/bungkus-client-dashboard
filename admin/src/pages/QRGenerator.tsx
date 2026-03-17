@@ -7,7 +7,13 @@ const QRGenerator: React.FC = () => {
     tableNumber: '',
     validUntil: '',
   });
-  const [generatedQRs, setGeneratedQRs] = useState([
+  const [generatedQRs, setGeneratedQRs] = useState<Array<{
+    id: number;
+    client: string;
+    table: string;
+    created: string;
+    status: 'active' | 'expired';
+  }>>([
     { id: 1, client: 'Restaurant ABC', table: '12', created: '2024-03-17 10:30 AM', status: 'active' },
     { id: 2, client: 'Cafe XYZ', table: '5', created: '2024-03-17 09:15 AM', status: 'active' },
     { id: 3, client: 'Bistro 123', table: '8', created: '2024-03-17 08:45 AM', status: 'expired' },
@@ -21,7 +27,13 @@ const QRGenerator: React.FC = () => {
     
     // Simulate QR generation
     setTimeout(() => {
-      const newQR = {
+      const newQR: {
+        id: number;
+        client: string;
+        table: string;
+        created: string;
+        status: 'active' | 'expired';
+      } = {
         id: generatedQRs.length + 1,
         client: formData.clientName,
         table: formData.tableNumber,
