@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/bungkus-client-dashboard/static/css/main.d65efaee.css",
-    "main.js": "/bungkus-client-dashboard/static/js/main.d216d267.js",
+    "main.css": "/bungkus-client-dashboard/static/css/main.642fb30f.css",
+    "main.js": "/bungkus-client-dashboard/static/js/main.6da1e4d6.js",
     "static/js/453.8510c497.chunk.js": "/bungkus-client-dashboard/static/js/453.8510c497.chunk.js",
     "index.html": "/bungkus-client-dashboard/index.html",
-    "main.d65efaee.css.map": "/bungkus-client-dashboard/static/css/main.d65efaee.css.map",
-    "main.d216d267.js.map": "/bungkus-client-dashboard/static/js/main.d216d267.js.map",
+    "main.642fb30f.css.map": "/bungkus-client-dashboard/static/css/main.642fb30f.css.map",
+    "main.6da1e4d6.js.map": "/bungkus-client-dashboard/static/js/main.6da1e4d6.js.map",
     "453.8510c497.chunk.js.map": "/bungkus-client-dashboard/static/js/453.8510c497.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.d65efaee.css",
-    "static/js/main.d216d267.js"
+    "static/css/main.642fb30f.css",
+    "static/js/main.6da1e4d6.js"
   ]
 }
