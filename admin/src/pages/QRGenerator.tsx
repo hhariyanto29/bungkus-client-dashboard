@@ -1,384 +1,442 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { QRCodeSVG } from 'qrcode.react';
-import { qrAPI, clientsAPI } from '../services/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { qrAPI, ordersAPI } from '../services/api';
 import { toast } from 'react-hot-toast';
 
-const QRGenerator: React.FC = () => {
-  const [clients, setClients] = useState<any[]>([]);
-  const [qrCodes, setQrCodes] = useState<any[]>([]);
-  const [selectedClient, setSelectedClient] = useState('');
-  const [tableNumbers, setTableNumbers] = useState('');
-  const [validUntil, setValidUntil] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    expired: 0,
-    used: 0
-  });
+interface Order {
+  id: number;
+  order_number: string;
+  client_name: string;
+}
 
-  // Fetch clients and QR codes
+interface QRCode {
+  id: number;
+  order_number: string;
+  client_name: string;
+  portal_url: string;
+  qr_image: string;
+  is_active: boolean;
+  access_count: number;
+  created_at: string;
+}
+
+interface GeneratedQR {
+  id: number;
+  qr_image: string;
+  portal_url: string;
+}
+
+const QRGenerator: React.FC = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | ''>('');
+  const [generatedQR, setGeneratedQR] = useState<GeneratedQR | null>(null);
+  const [qrCodes, setQrCodes] = useState<QRCode[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isLoadingQRCodes, setIsLoadingQRCodes] = useState(true);
+  const [deliveryLoading, setDeliveryLoading] = useState<string | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    fetchClients();
-    fetchQrCodes();
-    fetchStats();
+    fetchOrders();
+    fetchQRCodes();
   }, []);
 
-  const fetchClients = async () => {
+  const fetchOrders = async () => {
+    setIsLoadingOrders(true);
     try {
-      const response = await clientsAPI.getAll({ status: 'active' });
-      
-      if (response.data.success) {
-        setClients(response.data.data.clients || []);
-      }
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-      toast.error('Failed to fetch clients');
-    }
-  };
-
-  const fetchQrCodes = async () => {
-    setIsLoading(true);
-    try {
-      const response = await qrAPI.getAll({ limit: 20, orderBy: 'created_at', order: 'desc' });
-      
-      if (response.data.success) {
-        setQrCodes(response.data.data.qr_codes || []);
-      }
-    } catch (error) {
-      console.error('Error fetching QR codes:', error);
-      toast.error('Failed to fetch QR codes');
+      const response = await ordersAPI.getAll();
+      setOrders(response.data.data || []);
+    } catch {
+      toast.error('Failed to load orders');
     } finally {
-      setIsLoading(false);
+      setIsLoadingOrders(false);
     }
   };
 
-  const fetchStats = async () => {
+  const fetchQRCodes = async () => {
+    setIsLoadingQRCodes(true);
     try {
-      const response = await qrAPI.getStats();
-      
-      if (response.data.success) {
-        const data = response.data.data;
-        setStats({
-          total: data.total_codes || 0,
-          active: data.active_codes || 0,
-          expired: data.expired_codes || 0,
-          used: data.used_codes || 0
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+      const response = await qrAPI.getAll();
+      setQrCodes(response.data.data || []);
+    } catch {
+      toast.error('Failed to load QR codes');
+    } finally {
+      setIsLoadingQRCodes(false);
     }
   };
 
-  const generateQRCodes = async () => {
-    if (!selectedClient || !tableNumbers) {
-      toast.error('Please select a client and enter table numbers');
+  const handleGenerate = async () => {
+    if (!selectedOrderId) {
+      toast.error('Select an order first');
       return;
     }
-
     setIsGenerating(true);
     try {
-      const tableArray = tableNumbers.split(',').map(t => t.trim()).filter(t => t);
-      
-      if (tableArray.length === 1) {
-        // Single QR code
-        const response = await qrAPI.generate({
-          client_id: parseInt(selectedClient),
-          table_number: tableArray[0],
-          valid_until: validUntil || undefined
-        });
-        
-        if (response.data.success) {
-          toast.success('QR code generated successfully');
-        }
-      } else {
-        // Bulk generation
-        const response = await qrAPI.bulkGenerate(
-          parseInt(selectedClient),
-          tableArray,
-          validUntil || undefined
-        );
-        
-        if (response.data.success) {
-          toast.success(`${tableArray.length} QR codes generated successfully`);
-        }
-      }
-
-      // Refresh data
-      fetchQrCodes();
-      fetchStats();
-      
-      // Reset form
-      setSelectedClient('');
-      setTableNumbers('');
-      setValidUntil('');
-    } catch (error) {
-      console.error('Error generating QR codes:', error);
-      toast.error('Failed to generate QR codes');
+      const response = await qrAPI.generate(selectedOrderId as number);
+      const data = response.data.data;
+      setGeneratedQR({
+        id: data.id,
+        qr_image: data.qr_image,
+        portal_url: data.portal_url,
+      });
+      toast.success('QR code generated');
+      fetchQRCodes();
+    } catch {
+      toast.error('Failed to generate QR code');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const updateQRStatus = async (id: number, status: string) => {
+  const handleEmail = async () => {
+    if (!generatedQR) return;
+    const email = window.prompt('Enter email address:');
+    if (!email) return;
+    setDeliveryLoading('email');
     try {
-      const response = await qrAPI.updateStatus(id, status);
-      
-      if (response.data.success) {
-        toast.success(`QR code ${status}`);
-        fetchQrCodes();
-        fetchStats();
-      }
-    } catch (error) {
-      console.error('Error updating QR status:', error);
-      toast.error('Failed to update QR code status');
+      await qrAPI.deliver(generatedQR.id, 'email', email);
+      toast.success(`QR sent to ${email}`);
+    } catch {
+      toast.error('Failed to send email');
+    } finally {
+      setDeliveryLoading(null);
     }
   };
 
-  const downloadQR = (qrData: string, clientName: string, tableNumber: string) => {
-    const svg = document.getElementById(`qr-${qrData}`)?.querySelector('svg');
-    if (svg) {
-      const svgData = new XMLSerializer().serializeToString(svg);
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx?.drawImage(img, 0, 0);
-        const pngFile = canvas.toDataURL('image/png');
-        const downloadLink = document.createElement('a');
-        downloadLink.download = `QR-${clientName}-Table-${tableNumber}.png`;
-        downloadLink.href = pngFile;
-        downloadLink.click();
-      };
-      img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  const handleWhatsApp = async () => {
+    if (!generatedQR) return;
+    const phone = window.prompt('Enter phone number (with country code):');
+    if (!phone) return;
+    setDeliveryLoading('whatsapp');
+    try {
+      const response = await qrAPI.deliver(generatedQR.id, 'whatsapp', phone);
+      const link = response.data.data?.whatsapp_link;
+      if (link) window.open(link, '_blank');
+      toast.success('WhatsApp link opened');
+    } catch {
+      toast.error('Failed to send via WhatsApp');
+    } finally {
+      setDeliveryLoading(null);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleCopyLink = async () => {
+    if (!generatedQR) return;
+    try {
+      await navigator.clipboard.writeText(generatedQR.portal_url);
+      toast.success('Portal URL copied to clipboard');
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
+  const handleDeactivate = async (id: number) => {
+    try {
+      await qrAPI.deactivate(id);
+      toast.success('QR code deactivated');
+      fetchQRCodes();
+    } catch {
+      toast.error('Failed to deactivate QR code');
+    }
+  };
+
+  const handleRegenerate = async (id: number) => {
+    try {
+      await qrAPI.regenerate(id);
+      toast.success('QR code regenerated');
+      fetchQRCodes();
+    } catch {
+      toast.error('Failed to regenerate QR code');
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'short',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <motion.h1 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-5xl font-bold text-white mb-8 text-center"
-        >
-          QR Code Generator
-        </motion.h1>
+    <div className="space-y-8">
+      {/* Header */}
+      <motion.h1
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="font-display text-4xl tracking-widest text-[#00f0ff] uppercase"
+      >
+        QR Codes
+      </motion.h1>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20"
-          >
-            <h3 className="text-gray-300 text-sm mb-2">Total QR Codes</h3>
-            <p className="text-3xl font-bold text-white">{stats.total}</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-            className="bg-green-500/20 backdrop-blur-xl rounded-2xl p-6 border border-green-500/30"
-          >
-            <h3 className="text-green-200 text-sm mb-2">Active</h3>
-            <p className="text-3xl font-bold text-green-300">{stats.active}</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="bg-blue-500/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-500/30"
-          >
-            <h3 className="text-blue-200 text-sm mb-2">Used Today</h3>
-            <p className="text-3xl font-bold text-blue-300">{stats.used}</p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="bg-red-500/20 backdrop-blur-xl rounded-2xl p-6 border border-red-500/30"
-          >
-            <h3 className="text-red-200 text-sm mb-2">Expired</h3>
-            <p className="text-3xl font-bold text-red-300">{stats.expired}</p>
-          </motion.div>
-        </div>
+      {/* Generate QR Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="rounded-2xl bg-white/5 border border-white/10 p-6 backdrop-blur-sm"
+      >
+        <h2 className="font-display text-lg tracking-wider text-white/80 mb-6">
+          Generate QR
+        </h2>
 
-        {/* QR Generator Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 mb-8 border border-white/20"
-        >
-          <h2 className="text-2xl font-bold text-white mb-6">Generate New QR Code</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Select Client
-              </label>
-              <select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
-              >
-                <option value="" className="bg-gray-900">Select a client...</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id} className="bg-gray-900">
-                    {client.restaurant_name} - {client.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Table Numbers
-              </label>
-              <input
-                type="text"
-                placeholder="e.g., 1, 2, 3 or just 5"
-                value={tableNumbers}
-                onChange={(e) => setTableNumbers(e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Valid Until (Optional)
-              </label>
-              <input
-                type="date"
-                value={validUntil}
-                onChange={(e) => setValidUntil(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
-              />
-            </div>
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          {/* Order Select */}
+          <div className="flex-1 w-full">
+            <label className="block text-xs uppercase tracking-wider text-white/40 mb-2">
+              Select Order
+            </label>
+            <select
+              value={selectedOrderId}
+              onChange={(e) =>
+                setSelectedOrderId(e.target.value ? Number(e.target.value) : '')
+              }
+              disabled={isLoadingOrders}
+              className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-white/30 outline-none transition-colors focus:border-[#00f0ff]/50 focus:ring-1 focus:ring-[#00f0ff]/30 appearance-none"
+            >
+              <option value="" className="bg-gray-900 text-white">
+                {isLoadingOrders ? 'Loading orders...' : '-- Choose an order --'}
+              </option>
+              {orders.map((order) => (
+                <option
+                  key={order.id}
+                  value={order.id}
+                  className="bg-gray-900 text-white"
+                >
+                  {order.order_number} — {order.client_name}
+                </option>
+              ))}
+            </select>
           </div>
 
+          {/* Generate Button */}
           <button
-            onClick={generateQRCodes}
-            disabled={isGenerating || !selectedClient || !tableNumbers}
-            className="mt-6 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl font-medium transition-all flex items-center justify-center"
+            onClick={handleGenerate}
+            disabled={!selectedOrderId || isGenerating}
+            className="shrink-0 rounded-lg bg-[#00f0ff] px-8 py-3 font-display text-sm uppercase tracking-wider text-black transition-all hover:shadow-lg hover:shadow-[#00f0ff]/25 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:shadow-none"
           >
             {isGenerating ? (
-              <span className="flex items-center">
-                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              <span className="flex items-center gap-2">
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 Generating...
               </span>
             ) : (
-              'Generate QR Code(s)'
+              'Generate QR'
             )}
           </button>
-        </motion.div>
+        </div>
+      </motion.div>
 
-        {/* Generated QR Codes */}
-        <h2 className="text-2xl font-bold text-white mb-6">Recent QR Codes</h2>
-        
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+      {/* Generated QR Display + Delivery */}
+      <AnimatePresence>
+        {generatedQR && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex flex-col items-center gap-6"
+          >
+            {/* Glass Card with QR */}
+            <div
+              ref={printRef}
+              className="print-area rounded-2xl bg-white/5 border border-white/10 p-8 backdrop-blur-sm flex flex-col items-center max-w-sm w-full"
+            >
+              <img
+                src={`data:image/png;base64,${generatedQR.qr_image}`}
+                alt="Generated QR Code"
+                className="w-64 h-64 rounded-lg bg-white p-3"
+              />
+              <p className="mt-4 text-xs text-white/40 break-all text-center select-all">
+                {generatedQR.portal_url}
+              </p>
+            </div>
+
+            {/* Delivery Buttons */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-lg">
+              <button
+                onClick={handleEmail}
+                disabled={deliveryLoading === 'email'}
+                className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition-all hover:bg-white/10 hover:border-[#00f0ff]/30 disabled:opacity-40"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+                {deliveryLoading === 'email' ? '...' : 'Email'}
+              </button>
+
+              <button
+                onClick={handleWhatsApp}
+                disabled={deliveryLoading === 'whatsapp'}
+                className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition-all hover:bg-white/10 hover:border-green-500/30 disabled:opacity-40"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.75.75 0 00.917.918l4.458-1.495A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.94 9.94 0 01-5.39-1.583l-.386-.238-2.65.889.889-2.65-.238-.386A9.94 9.94 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+                </svg>
+                {deliveryLoading === 'whatsapp' ? '...' : 'WhatsApp'}
+              </button>
+
+              <button
+                onClick={handlePrint}
+                className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition-all hover:bg-white/10 hover:border-white/30"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18.75 12h.008v.008h-.008V12zm-2.25 0h.008v.008H16.5V12z" />
+                </svg>
+                Print
+              </button>
+
+              <button
+                onClick={handleCopyLink}
+                className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition-all hover:bg-white/10 hover:border-[#00f0ff]/30"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.072a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364L4.34 8.06" />
+                </svg>
+                Copy Link
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* QR Codes List */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm overflow-hidden"
+      >
+        <div className="px-6 py-4 border-b border-white/10">
+          <h2 className="font-display text-lg tracking-wider text-white/80">
+            All QR Codes
+          </h2>
+        </div>
+
+        {isLoadingQRCodes ? (
+          <div className="flex items-center justify-center py-16">
+            <svg
+              className="h-8 w-8 animate-spin text-[#00f0ff]"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
           </div>
         ) : qrCodes.length === 0 ? (
-          <div className="text-center text-gray-400 py-16 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10">
-            <p className="text-xl">No QR codes generated yet</p>
+          <div className="py-16 text-center text-white/30 text-sm">
+            No QR codes yet. Generate one above.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {qrCodes.map((qr, index) => (
-              <motion.div
-                key={qr.id}
-                id={`qr-${qr.qr_data}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all"
-              >
-                <div className="bg-white rounded-xl p-4 mb-4">
-                  <QRCodeSVG
-                    value={qr.qr_data}
-                    size={200}
-                    className="w-full h-auto"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-white">{qr.restaurant_name}</h3>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Table {qr.table_number}</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                      qr.status === 'active'
-                        ? 'bg-green-500/20 text-green-300 border-green-500/30'
-                        : qr.status === 'used'
-                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                        : 'bg-red-500/20 text-red-300 border-red-500/30'
-                    }`}>
-                      {qr.status}
-                    </span>
-                  </div>
-                  
-                  <div className="text-sm text-gray-400">
-                    <p>Created: {formatDate(qr.created_at)}</p>
-                    {qr.valid_until && (
-                      <p>Expires: {formatDate(qr.valid_until)}</p>
-                    )}
-                    {qr.last_used && (
-                      <p>Last used: {formatDate(qr.last_used)}</p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => downloadQR(qr.qr_data, qr.restaurant_name, qr.table_number)}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Download
-                    </button>
-                    {qr.status === 'active' && (
-                      <button
-                        onClick={() => updateQRStatus(qr.id, 'deactivated')}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Deactivate
-                      </button>
-                    )}
-                    {qr.status === 'deactivated' && (
-                      <button
-                        onClick={() => updateQRStatus(qr.id, 'active')}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-                      >
-                        Reactivate
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wider text-white/30 border-b border-white/5">
+                  <th className="px-6 py-3">Order</th>
+                  <th className="px-6 py-3">Client</th>
+                  <th className="px-6 py-3">Portal URL</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Views</th>
+                  <th className="px-6 py-3">Created</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {qrCodes.map((qr) => (
+                  <tr
+                    key={qr.id}
+                    className="transition-colors hover:bg-white/[0.02]"
+                  >
+                    <td className="px-6 py-4 font-mono text-[#00f0ff]/80">
+                      {qr.order_number}
+                    </td>
+                    <td className="px-6 py-4 text-white/70">
+                      {qr.client_name}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-white/40 text-xs truncate block max-w-[200px]">
+                        {qr.portal_url}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {qr.is_active ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          <span className="text-emerald-400">Active</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
+                          <span className="text-white/30">Inactive</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-white/50">
+                      {qr.access_count}
+                    </td>
+                    <td className="px-6 py-4 text-white/40">
+                      {formatDate(qr.created_at)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {qr.is_active && (
+                          <button
+                            onClick={() => handleDeactivate(qr.id)}
+                            className="rounded px-2.5 py-1 text-xs border border-white/10 text-white/50 transition-colors hover:border-red-500/30 hover:text-red-400"
+                          >
+                            Deactivate
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleRegenerate(qr.id)}
+                          className="rounded px-2.5 py-1 text-xs border border-white/10 text-white/50 transition-colors hover:border-[#00f0ff]/30 hover:text-[#00f0ff]"
+                        >
+                          Regenerate
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

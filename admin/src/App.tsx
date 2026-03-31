@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -10,7 +10,7 @@ import Dashboard from './pages/Dashboard';
 import QRGenerator from './pages/QRGenerator';
 import Orders from './pages/Orders';
 import Clients from './pages/Clients';
-import Settings from './pages/Settings';
+import Shipments from './pages/Shipments';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,40 +22,27 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  useEffect(() => {
-    // Initialize dark mode from localStorage
-    const darkMode = localStorage.getItem('darkMode') === 'true';
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
-              duration: 4000,
+              duration: 3000,
               style: {
-                background: '#1f2937',
-                color: '#fff',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: '#1a1a2e',
+                color: '#e2e8f0',
+                border: '1px solid rgba(0, 240, 255, 0.2)',
+                borderRadius: '12px',
+                fontSize: '14px',
+                fontFamily: 'Space Grotesk, sans-serif',
               },
               success: {
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
-                },
+                iconTheme: { primary: '#00f0ff', secondary: '#0a0a1a' },
               },
               error: {
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
-                },
+                iconTheme: { primary: '#f43f5e', secondary: '#0a0a1a' },
               },
             }}
           />
@@ -71,10 +58,10 @@ function App() {
             >
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="qr-generator" element={<QRGenerator />} />
               <Route path="orders" element={<Orders />} />
               <Route path="clients" element={<Clients />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="qr-generator" element={<QRGenerator />} />
+              <Route path="shipments" element={<Shipments />} />
             </Route>
           </Routes>
         </Router>

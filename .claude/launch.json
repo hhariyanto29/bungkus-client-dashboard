@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3000,
+      "cwd": "/tmp/bungkus-client-dashboard/admin",
+      "env": {
+        "PUBLIC_URL": "/"
+      }
+    },
+    {
+      "name": "portal",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3002,
+      "cwd": "/tmp/bungkus-client-dashboard/frontend",
+      "env": {
+        "PUBLIC_URL": "/",
+        "PORT": "3002"
+      }
+    }
+  ]
+}

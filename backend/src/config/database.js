@@ -10,6 +10,7 @@ class Database {
           console.error('Error connecting to database:', err.message);
         } else {
           console.log('Connected to SQLite database');
+          this.db.run('PRAGMA foreign_keys = ON');
           this.initializeTables();
         }
       }
@@ -17,167 +18,261 @@ class Database {
   }
 
   initializeTables() {
-    // Users table for authentication
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        name TEXT NOT NULL,
-        role TEXT DEFAULT 'admin',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_login DATETIME
-      )
-    `);
+    this.db.serialize(() => {
+      // Users table for authentication
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          name TEXT NOT NULL,
+          role TEXT DEFAULT 'admin',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          last_login DATETIME
+        )
+      `);
 
-    // Clients table
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS clients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        phone TEXT,
-        location TEXT,
-        tables INTEGER DEFAULT 0,
-        status TEXT DEFAULT 'active',
-        join_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        revenue INTEGER DEFAULT 0
-      )
-    `);
+      // Clients table (packaging company clients)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS clients (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          company_name TEXT,
+          email TEXT UNIQUE NOT NULL,
+          phone TEXT,
+          address TEXT,
+          npwp TEXT,
+          location TEXT,
+          status TEXT DEFAULT 'active',
+          join_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+          revenue INTEGER DEFAULT 0
+        )
+      `);
 
-    // Orders table
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_number TEXT UNIQUE NOT NULL,
-        client_id INTEGER,
-        client_name TEXT NOT NULL,
-        table_number TEXT,
-        items TEXT NOT NULL, -- JSON string of items
-        total_amount INTEGER NOT NULL,
-        status TEXT DEFAULT 'pending',
-        notes TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        completed_at DATETIME,
-        FOREIGN KEY (client_id) REFERENCES clients(id)
-      )
-    `);
+      // Orders table (packaging orders)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_number TEXT UNIQUE NOT NULL,
+          client_id INTEGER NOT NULL,
+          subtotal INTEGER DEFAULT 0,
+          discount INTEGER DEFAULT 0,
+          tax_amount INTEGER DEFAULT 0,
+          total_amount INTEGER DEFAULT 0,
+          payment_status TEXT DEFAULT 'unpaid',
+          production_status TEXT DEFAULT 'pending',
+          packaging_details TEXT,
+          notes TEXT,
+          due_date DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          completed_at DATETIME,
+          FOREIGN KEY (client_id) REFERENCES clients(id)
+        )
+      `);
 
-    // QR Codes table
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS qr_codes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        table_number TEXT NOT NULL,
-        qr_data TEXT NOT NULL,
-        valid_until DATETIME,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES clients(id)
-      )
-    `);
+      // Order items (line items for packaging orders)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS order_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_id INTEGER NOT NULL,
+          item_name TEXT NOT NULL,
+          description TEXT,
+          material TEXT,
+          size TEXT,
+          print_type TEXT,
+          quantity INTEGER DEFAULT 1,
+          unit_price INTEGER DEFAULT 0,
+          total_price INTEGER DEFAULT 0,
+          specifications TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        )
+      `);
 
-    // Insert default admin user if not exists
-    this.db.get('SELECT COUNT(*) as count FROM users', (err, row) => {
-      if (err) {
-        console.error('Error checking users:', err.message);
-        return;
-      }
-      
-      if (row.count === 0) {
-        const defaultPassword = 'admin123'; // In production, use environment variable
-        // In real app, hash this password
-        this.db.run(
-          'INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)',
-          ['admin@bungkus.com', defaultPassword, 'Admin User', 'admin'],
-          (err) => {
-            if (err) {
-              console.error('Error inserting default user:', err.message);
-            } else {
-              console.log('Default admin user created');
-            }
-          }
-        );
-      }
+      // Invoices
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS invoices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_id INTEGER NOT NULL,
+          invoice_number TEXT UNIQUE NOT NULL,
+          subtotal INTEGER DEFAULT 0,
+          tax_amount INTEGER DEFAULT 0,
+          total_amount INTEGER DEFAULT 0,
+          due_date DATETIME,
+          status TEXT DEFAULT 'draft',
+          file_path TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Tax invoices (Faktur Pajak)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS tax_invoices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_id INTEGER NOT NULL,
+          invoice_id INTEGER,
+          faktur_number TEXT UNIQUE NOT NULL,
+          npwp TEXT NOT NULL,
+          company_name TEXT NOT NULL,
+          tax_amount INTEGER DEFAULT 0,
+          file_path TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+          FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+        )
+      `);
+
+      // Shipments (delivery tracking)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS shipments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_id INTEGER NOT NULL,
+          tracking_number TEXT,
+          courier TEXT,
+          service_type TEXT,
+          status TEXT DEFAULT 'pending',
+          estimated_delivery DATETIME,
+          actual_delivery DATETIME,
+          shipping_address TEXT,
+          notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        )
+      `);
+
+      // QR Codes (order-based with secret hash)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS qr_codes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          order_id INTEGER NOT NULL,
+          secret_hash TEXT UNIQUE NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          expires_at DATETIME,
+          access_count INTEGER DEFAULT 0,
+          last_accessed DATETIME,
+          last_ip TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        )
+      `);
+
+      // QR delivery log
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS qr_delivery_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          qr_id INTEGER NOT NULL,
+          delivery_method TEXT NOT NULL,
+          recipient TEXT,
+          delivered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          delivered_by INTEGER,
+          FOREIGN KEY (qr_id) REFERENCES qr_codes(id) ON DELETE CASCADE,
+          FOREIGN KEY (delivered_by) REFERENCES users(id)
+        )
+      `);
+
+      // Access logs (QR scan tracking)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS access_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          qr_id INTEGER NOT NULL,
+          ip_address TEXT,
+          user_agent TEXT,
+          action TEXT DEFAULT 'view',
+          accessed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (qr_id) REFERENCES qr_codes(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Seed default data after tables are created
+      this._seedData();
     });
+  }
 
-    // Insert sample clients if not exists
-    this.db.get('SELECT COUNT(*) as count FROM clients', (err, row) => {
-      if (err) {
-        console.error('Error checking clients:', err.message);
-        return;
-      }
-      
-      if (row.count === 0) {
-        const sampleClients = [
-          ['Restaurant ABC', 'contact@restaurantabc.com', '+62 812-3456-7890', 'Jakarta Selatan', 20, 'active', 45000000],
-          ['Cafe XYZ', 'hello@cafexyz.com', '+62 813-9876-5432', 'Bandung', 12, 'active', 28000000],
-          ['Bistro 123', 'info@bistro123.com', '+62 811-2345-6789', 'Surabaya', 15, 'inactive', 12000000],
-          ['Warung Makan Sederhana', 'warung@sederhana.com', '+62 814-5678-9012', 'Yogyakarta', 8, 'active', 18500000]
-        ];
-
-        sampleClients.forEach(client => {
-          this.db.run(
-            'INSERT INTO clients (name, email, phone, location, tables, status, revenue) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            client,
-            (err) => {
-              if (err) console.error('Error inserting sample client:', err.message);
-            }
-          );
+  async _seedData() {
+    try {
+      // Default admin user
+      const userCount = await this.constructor.prototype.get.call(
+        { db: this.db },
+        'SELECT COUNT(*) as count FROM users'
+      );
+      // Use promise wrappers for seeding
+      const run = (sql, params) => new Promise((resolve, reject) => {
+        this.db.run(sql, params, function(err) {
+          if (err) reject(err); else resolve({ id: this.lastID });
         });
+      });
+      const get = (sql, params) => new Promise((resolve, reject) => {
+        this.db.get(sql, params || [], (err, row) => {
+          if (err) reject(err); else resolve(row);
+        });
+      });
+
+      const uc = await get('SELECT COUNT(*) as count FROM users');
+      if (uc.count === 0) {
+        await run('INSERT INTO users (email, password_hash, name, role) VALUES (?, ?, ?, ?)',
+          ['admin@bungkus.com', 'admin123', 'Admin User', 'admin']);
+        console.log('Default admin user created');
+      }
+
+      const cc = await get('SELECT COUNT(*) as count FROM clients');
+      if (cc.count === 0) {
+        const clients = [
+          ['PT Maju Bersama', 'PT Maju Bersama', 'contact@majubersama.com', '+62 812-3456-7890', 'Jl. Industri No. 10, Jakarta Selatan', '01.234.567.8-901.000', 'Jakarta Selatan', 'active', 45000000],
+          ['CV Berkah Packaging', 'CV Berkah Packaging', 'hello@berkahpack.com', '+62 813-9876-5432', 'Jl. Raya Bandung No. 5', '02.345.678.9-012.000', 'Bandung', 'active', 28000000],
+          ['UD Sejahtera', 'UD Sejahtera', 'info@sejahtera.com', '+62 811-2345-6789', 'Jl. Pahlawan No. 15, Surabaya', '03.456.789.0-123.000', 'Surabaya', 'inactive', 12000000],
+          ['PT Nusantara Foods', 'PT Nusantara Foods', 'order@nusantarafoods.com', '+62 814-5678-9012', 'Jl. Malioboro No. 20, Yogyakarta', '04.567.890.1-234.000', 'Yogyakarta', 'active', 18500000]
+        ];
+        for (const c of clients) {
+          await run('INSERT INTO clients (name, company_name, email, phone, address, npwp, location, status, revenue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', c);
+        }
         console.log('Sample clients inserted');
       }
-    });
 
-    // Insert sample orders if not exists
-    this.db.get('SELECT COUNT(*) as count FROM orders', (err, row) => {
-      if (err) {
-        console.error('Error checking orders:', err.message);
-        return;
-      }
-      
-      if (row.count === 0) {
-        const sampleOrders = [
-          ['ORD-001', 1, 'John Doe', 'Table 5', JSON.stringify([
-            { name: 'Nasi Goreng Special', qty: 2, price: 35000 },
-            { name: 'Es Teh Manis', qty: 2, price: 5000 }
-          ]), 80000, 'pending', 'Extra pedas untuk nasi goreng'],
-          ['ORD-002', 2, 'Jane Smith', 'Table 12', JSON.stringify([
-            { name: 'Ayam Bakar', qty: 1, price: 45000 },
-            { name: 'Sate Ayam', qty: 2, price: 20000 }
-          ]), 85000, 'processing', ''],
-          ['ORD-003', 3, 'Bob Johnson', 'Table 3', JSON.stringify([
-            { name: 'Mie Ayam Special', qty: 3, price: 25000 },
-            { name: 'Jus Alpukat', qty: 3, price: 15000 }
-          ]), 120000, 'completed', 'Mie tidak pakai sayur'],
-          ['ORD-004', 4, 'Alice Brown', 'Table 8', JSON.stringify([
-            { name: 'Soto Ayam', qty: 1, price: 30000 },
-            { name: 'Teh Botol', qty: 1, price: 8000 }
-          ]), 38000, 'completed', '']
+      const oc = await get('SELECT COUNT(*) as count FROM orders');
+      if (oc.count === 0) {
+        const orders = [
+          ['ORD-2026-001', 1, 15000000, 0, 1650000, 16650000, 'dp', 'production', 'Dus makanan custom print full color', '2026-04-15'],
+          ['ORD-2026-002', 2, 8500000, 500000, 880000, 8880000, 'unpaid', 'pending', 'Paper bag kraft polos', '2026-04-20'],
+          ['ORD-2026-003', 4, 22000000, 1000000, 2310000, 23310000, 'lunas', 'shipped', 'Standing pouch custom untuk snack', '2026-04-10'],
+          ['ORD-2026-004', 1, 5000000, 0, 550000, 5550000, 'lunas', 'delivered', 'Sticker label produk', '2026-03-25']
         ];
+        for (const o of orders) {
+          await run('INSERT INTO orders (order_number, client_id, subtotal, discount, tax_amount, total_amount, payment_status, production_status, notes, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', o);
+        }
 
-        sampleOrders.forEach(order => {
-          this.db.run(
-            'INSERT INTO orders (order_number, client_id, client_name, table_number, items, total_amount, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            order,
-            (err) => {
-              if (err) console.error('Error inserting sample order:', err.message);
-            }
-          );
-        });
-        console.log('Sample orders inserted');
+        const items = [
+          [1, 'Dus Makanan 20x15x8cm', 'Dus makanan dengan tutup', 'Duplex 310gsm', '20x15x8cm', 'Full Color Offset', 5000, 3000, 15000000],
+          [2, 'Paper Bag Kraft M', 'Paper bag ukuran medium', 'Kraft 150gsm', '25x10x30cm', 'Polos', 2000, 4250, 8500000],
+          [3, 'Standing Pouch 14x22cm', 'Standing pouch dengan zipper', 'Aluminium Foil', '14x22cm', 'Digital Print', 10000, 2200, 22000000],
+          [4, 'Sticker Label 5x3cm', 'Sticker label produk waterproof', 'Vinyl', '5x3cm', 'Digital Print', 10000, 500, 5000000]
+        ];
+        for (const i of items) {
+          await run('INSERT INTO order_items (order_id, item_name, description, material, size, print_type, quantity, unit_price, total_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', i);
+        }
+
+        await run(
+          `INSERT INTO shipments (order_id, tracking_number, courier, service_type, status, estimated_delivery, actual_delivery, shipping_address, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [4, 'JNE1234567890', 'JNE', 'REG', 'delivered', '2026-03-28', '2026-03-27', 'Jl. Industri No. 10, Jakarta Selatan', 'Diterima oleh security']
+        );
+        await run(
+          `INSERT INTO shipments (order_id, tracking_number, courier, service_type, status, estimated_delivery, shipping_address) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [3, 'SICEPAT0098765', 'SiCepat', 'BEST', 'in_transit', '2026-04-02', 'Jl. Malioboro No. 20, Yogyakarta']
+        );
+
+        console.log('Sample orders, items, and shipments inserted');
       }
-    });
+    } catch (error) {
+      console.error('Seed data error:', error.message);
+    }
   }
 
   query(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.all(sql, params, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
+        if (err) reject(err);
+        else resolve(rows);
       });
     });
   }
@@ -185,11 +280,8 @@ class Database {
   run(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id: this.lastID, changes: this.changes });
-        }
+        if (err) reject(err);
+        else resolve({ id: this.lastID, changes: this.changes });
       });
     });
   }
@@ -197,11 +289,8 @@ class Database {
   get(sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.get(sql, params, (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
+        if (err) reject(err);
+        else resolve(row);
       });
     });
   }
@@ -209,10 +298,9 @@ class Database {
 
 const database = new Database();
 
-// Export the database instance with its methods
 module.exports = {
   query: (sql, params) => database.query(sql, params),
   run: (sql, params) => database.run(sql, params),
   get: (sql, params) => database.get(sql, params),
-  db: database.db // For direct access if needed
+  db: database.db
 };
