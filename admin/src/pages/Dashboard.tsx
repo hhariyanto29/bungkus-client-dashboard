@@ -1,388 +1,202 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
+
+const formatRupiah = (value: number): string => {
+  if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `Rp ${(value / 1_000).toFixed(0)}K`;
+  return `Rp ${value.toLocaleString('id-ID')}`;
+};
+
+const productionStatusColor: Record<string, string> = {
+  pending: 'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
+  design: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
+  production: 'bg-purple-400/20 text-purple-300 border-purple-400/30',
+  qc: 'bg-orange-400/20 text-orange-300 border-orange-400/30',
+  ready: 'bg-teal-400/20 text-teal-300 border-teal-400/30',
+  shipped: 'bg-cyan-400/20 text-cyan-300 border-cyan-400/30',
+  delivered: 'bg-green-400/20 text-green-300 border-green-400/30',
+};
+
+const paymentStatusColor: Record<string, string> = {
+  unpaid: 'bg-red-400/20 text-red-300 border-red-400/30',
+  dp: 'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
+  lunas: 'bg-green-400/20 text-green-300 border-green-400/30',
+};
+
+const fadeIn = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
+
+const OrdersIcon = () => (
+  <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+  </svg>
+);
+
+const RevenueIcon = () => (
+  <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+  </svg>
+);
+
+const ClientsIcon = () => (
+  <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+  </svg>
+);
+
+const QRIcon = () => (
+  <svg className="w-5 h-5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+  </svg>
+);
 
 const Dashboard: React.FC = () => {
   const { stats, recentOrders, isLoading } = useDashboardData();
 
-  const dashboardStats = [
-    { 
-      name: 'Total Orders Today', 
-      value: stats.todaysOrders.toString(), 
-      change: '+12%', 
-      changeType: 'positive',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-        </svg>
-      ),
-      bgGradient: 'from-blue-500 to-cyan-400',
-      shadowColor: 'shadow-blue-500/25'
-    },
-    { 
-      name: 'Pending Orders', 
-      value: stats.pendingOrders.toString(), 
-      change: '-3%', 
-      changeType: 'negative',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      bgGradient: 'from-orange-500 to-red-400',
-      shadowColor: 'shadow-orange-500/25'
-    },
-    { 
-      name: 'Revenue', 
-      value: `Rp ${(stats.totalRevenue / 1000000).toFixed(1)}M`, 
-      change: '+23%', 
-      changeType: 'positive',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      bgGradient: 'from-green-500 to-emerald-400',
-      shadowColor: 'shadow-green-500/25'
-    },
-    { 
-      name: 'Active Clients', 
-      value: stats.activeClients.toString(), 
-      change: '+5%', 
-      changeType: 'positive',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      ),
-      bgGradient: 'from-purple-500 to-pink-400',
-      shadowColor: 'shadow-purple-500/25'
-    },
-    { 
-      name: 'QR Codes Generated', 
-      value: stats.qrCodesGenerated.toString(), 
-      change: '+17%', 
-      changeType: 'positive',
-      icon: (
-        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h2M8 20h2m-2-4v-4H4v4h4z" />
-        </svg>
-      ),
-      bgGradient: 'from-indigo-500 to-blue-400',
-      shadowColor: 'shadow-indigo-500/25'
-    },
+  const statCards = [
+    { label: 'Total Orders', value: stats.totalOrders.toLocaleString(), icon: <OrdersIcon /> },
+    { label: 'Revenue', value: formatRupiah(stats.totalRevenue), icon: <RevenueIcon /> },
+    { label: 'Active Clients', value: stats.activeClients.toLocaleString(), icon: <ClientsIcon /> },
+    { label: 'QR Generated', value: stats.qrCodesGenerated.toLocaleString(), icon: <QRIcon /> },
   ];
-
-  const statusStyles = {
-    pending: {
-      bg: 'bg-gradient-to-r from-yellow-400/20 to-orange-400/20',
-      text: 'text-yellow-800 dark:text-yellow-300',
-      dot: 'bg-gradient-to-r from-yellow-400 to-orange-400',
-      glow: 'shadow-yellow-400/50'
-    },
-    processing: {
-      bg: 'bg-gradient-to-r from-blue-400/20 to-cyan-400/20',
-      text: 'text-blue-800 dark:text-blue-300',
-      dot: 'bg-gradient-to-r from-blue-400 to-cyan-400',
-      glow: 'shadow-blue-400/50'
-    },
-    completed: {
-      bg: 'bg-gradient-to-r from-green-400/20 to-emerald-400/20',
-      text: 'text-green-800 dark:text-green-300',
-      dot: 'bg-gradient-to-r from-green-400 to-emerald-400',
-      glow: 'shadow-green-400/50'
-    },
-    cancelled: {
-      bg: 'bg-gradient-to-r from-red-400/20 to-pink-400/20',
-      text: 'text-red-800 dark:text-red-300',
-      dot: 'bg-gradient-to-r from-red-400 to-pink-400',
-      glow: 'shadow-red-400/50'
-    },
-  };
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
-  };
 
   return (
     <div className="space-y-8">
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative"
-      >
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400">
-          Dashboard Overview
-        </h1>
-        <p className="mt-2 text-dark-600 dark:text-dark-400">
-          Welcome back! Here's what's happening with your business today.
-        </p>
-        
-        {/* Decorative element */}
-        <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full filter blur-3xl opacity-20 animate-float"></div>
-      </motion.div>
-      
-      {/* Stats Grid */}
-      <motion.dl 
-        variants={container}
+      {/* Header */}
+      <motion.div
+        variants={fadeIn}
         initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        animate="visible"
+        transition={{ duration: 0.4 }}
       >
-        {dashboardStats.map((stat, index) => (
+        <h1 className="font-display text-3xl font-bold tracking-wider text-white">
+          DASHBOARD
+        </h1>
+        <p className="mt-1 font-sans text-sm text-gray-400">
+          Real-time overview of your operations
+        </p>
+      </motion.div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card, i) => (
           <motion.div
-            key={stat.name}
-            variants={item}
-            whileHover={{ 
-              scale: 1.05,
-              rotateZ: 0.5,
-              transition: { duration: 0.2 }
-            }}
-            className="relative group"
+            key={card.label}
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            transition={{ duration: 0.4, delay: i * 0.08 }}
+            className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300 ${stat.shadowColor}`}></div>
-            <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-dark-700/20 overflow-hidden">
-              {/* Animated gradient background */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient} opacity-[0.08] dark:opacity-[0.15]`}></div>
-              
-              <div className="relative p-6">
-                <dt className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-dark-600 dark:text-dark-300">{stat.name}</p>
-                  <motion.div 
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.5 }}
-                    className={`p-3 rounded-2xl bg-gradient-to-br ${stat.bgGradient} text-white shadow-lg ${stat.shadowColor}`}
-                  >
-                    {stat.icon}
-                  </motion.div>
-                </dt>
-                <dd className="mt-4">
-                  <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-dark-800 to-dark-600 dark:from-white dark:to-dark-200">
-                    {stat.value}
-                  </p>
-                  <div className="flex items-center mt-2">
-                    <p className={`flex items-center text-sm font-semibold ${
-                      stat.changeType === 'positive' 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : 'text-red-600 dark:text-red-400'
-                    }`}>
-                      {stat.changeType === 'positive' ? (
-                        <motion.svg 
-                          initial={{ y: 2 }}
-                          animate={{ y: -2 }}
-                          transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
-                          className="w-4 h-4 mr-1" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                        </motion.svg>
-                      ) : (
-                        <motion.svg 
-                          initial={{ y: -2 }}
-                          animate={{ y: 2 }}
-                          transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
-                          className="w-4 h-4 mr-1" 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-                        </motion.svg>
-                      )}
-                      {stat.change}
-                    </p>
-                    <span className="ml-2 text-sm text-dark-500 dark:text-dark-400">from yesterday</span>
-                  </div>
-                </dd>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-sans uppercase tracking-widest text-gray-500">
+                {card.label}
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/10">
+                {card.icon}
               </div>
             </div>
+            <p className="mt-3 font-display text-2xl font-bold tracking-wide text-white">
+              {card.value}
+            </p>
           </motion.div>
         ))}
-      </motion.dl>
+      </div>
 
       {/* Recent Orders */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="relative"
+      <motion.div
+        variants={fadeIn}
+        initial="hidden"
+        animate="visible"
+        transition={{ duration: 0.4, delay: 0.35 }}
+        className="rounded-xl border border-white/10 bg-white/5 backdrop-blur"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-3xl blur-2xl"></div>
-        <div className="relative bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-3xl border border-white/20 dark:border-dark-700/20 overflow-hidden">
-          <div className="p-6 border-b border-dark-200/10 dark:border-dark-700/10 bg-gradient-to-r from-transparent via-white/5 to-transparent">
-            <div className="sm:flex sm:items-center">
-              <div className="sm:flex-auto">
-                <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
-                  Recent Orders
-                </h2>
-                <p className="mt-1 text-sm text-dark-600 dark:text-dark-400">
-                  Monitor and manage your latest orders in real-time
-                </p>
-              </div>
-              <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-2xl shadow-lg shadow-purple-500/25 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  View All Orders
-                </motion.button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gradient-to-r from-dark-50/30 to-dark-100/30 dark:from-dark-900/30 dark:to-dark-800/30">
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <h2 className="font-display text-lg font-semibold tracking-wide text-white">
+            RECENT ORDERS
+          </h2>
+          <Link
+            to="/orders"
+            className="font-sans text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            View All
+          </Link>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full font-sans text-sm">
+            <thead>
+              <tr className="border-b border-white/5 text-left text-xs uppercase tracking-widest text-gray-500">
+                <th className="px-6 py-3">Order ID</th>
+                <th className="px-6 py-3">Client</th>
+                <th className="px-6 py-3">Total</th>
+                <th className="px-6 py-3">Production</th>
+                <th className="px-6 py-3">Payment</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {isLoading ? (
                 <tr>
-                  <th className="py-4 pl-6 pr-3 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Order ID
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Client
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Items
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Total
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Status
-                  </th>
-                  <th className="px-3 py-4 text-left text-sm font-semibold text-dark-900 dark:text-white">
-                    Time
-                  </th>
-                  <th className="relative py-4 pl-3 pr-6">
-                    <span className="sr-only">Actions</span>
-                  </th>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                    <p className="mt-3 text-sm">Loading orders...</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-200/5 dark:divide-dark-700/5">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-600"></div>
-                      <p className="mt-2 text-dark-600 dark:text-dark-400">Loading orders...</p>
-                    </td>
-                  </tr>
-                ) : recentOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center">
-                      <svg className="mx-auto h-12 w-12 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      <p className="mt-2 text-dark-600 dark:text-dark-400">No orders yet</p>
-                    </td>
-                  </tr>
-                ) : (
-                  recentOrders.map((order: any, index: number) => (
-                    <motion.tr 
+              ) : recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    No orders yet
+                  </td>
+                </tr>
+              ) : (
+                recentOrders.map((order: any) => {
+                  const prodStyle =
+                    productionStatusColor[order.status] ||
+                    'bg-white/10 text-gray-300 border-white/10';
+                  const payStyle =
+                    paymentStatusColor[order.paymentStatus] ||
+                    paymentStatusColor['unpaid'];
+
+                  return (
+                    <tr
                       key={order.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-pink-50/50 dark:hover:from-purple-900/20 dark:hover:to-pink-900/20 transition-all duration-300"
+                      className="transition-colors hover:bg-white/[0.03]"
                     >
-                      <td className="whitespace-nowrap py-4 pl-6 pr-3 text-sm">
-                        <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-                          #{order.id}
-                        </span>
+                      <td className="whitespace-nowrap px-6 py-3 font-mono text-cyan-400">
+                        #{order.id}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-700 dark:text-dark-300">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/25">
-                            {order.client.charAt(0)}
-                          </div>
-                          <span className="ml-3 font-medium">{order.client}</span>
-                        </div>
+                      <td className="whitespace-nowrap px-6 py-3 text-gray-300">
+                        {order.client}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-700 dark:text-dark-300">
-                        {order.items} items
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-dark-900 dark:text-white">
+                      <td className="whitespace-nowrap px-6 py-3 text-white font-medium">
                         {order.total}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm">
-                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[order.status as keyof typeof statusStyles].bg} ${statusStyles[order.status as keyof typeof statusStyles].text} backdrop-blur-xl`}>
-                          <span className={`w-2 h-2 rounded-full ${statusStyles[order.status as keyof typeof statusStyles].dot} mr-2 shadow-md ${statusStyles[order.status as keyof typeof statusStyles].glow}`}></span>
-                          {order.status}
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-dark-500 dark:text-dark-400">
-                        {order.time}
-                      </td>
-                      <td className="relative whitespace-nowrap py-4 pl-3 pr-6 text-right text-sm font-medium">
-                        <motion.button 
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 font-semibold"
+                      <td className="whitespace-nowrap px-6 py-3">
+                        <span
+                          className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${prodStyle}`}
                         >
-                          View
-                        </motion.button>
+                          {order.status}
+                        </span>
                       </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                      <td className="whitespace-nowrap px-6 py-3">
+                        <span
+                          className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${payStyle}`}
+                        >
+                          {order.paymentStatus || 'unpaid'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      </motion.div>
-
-      {/* Quick Actions */}
-      <motion.div 
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        {[
-          { title: 'New Order', icon: '🛍️', color: 'from-blue-500 to-cyan-400', shadow: 'shadow-blue-500/25' },
-          { title: 'Generate QR', icon: '📱', color: 'from-purple-500 to-pink-400', shadow: 'shadow-purple-500/25' },
-          { title: 'Add Client', icon: '👥', color: 'from-green-500 to-emerald-400', shadow: 'shadow-green-500/25' },
-          { title: 'View Reports', icon: '📊', color: 'from-orange-500 to-red-400', shadow: 'shadow-orange-500/25' },
-        ].map((action, index) => (
-          <motion.button
-            key={index}
-            variants={item}
-            whileHover={{ 
-              scale: 1.05,
-              rotateZ: 1,
-              transition: { duration: 0.2 }
-            }}
-            whileTap={{ scale: 0.95 }}
-            className="relative group"
-          >
-            <div className={`absolute inset-0 bg-gradient-to-br ${action.color} rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300 ${action.shadow}`}></div>
-            <div className="relative p-6 bg-white/80 dark:bg-dark-800/80 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-dark-700/20 text-left">
-              <motion.div 
-                whileHover={{ rotate: 15 }}
-                className={`inline-flex p-3 rounded-2xl bg-gradient-to-br ${action.color} text-3xl mb-4 shadow-lg ${action.shadow}`}
-              >
-                {action.icon}
-              </motion.div>
-              <h3 className="text-lg font-semibold text-dark-900 dark:text-white">{action.title}</h3>
-            </div>
-          </motion.button>
-        ))}
       </motion.div>
     </div>
   );

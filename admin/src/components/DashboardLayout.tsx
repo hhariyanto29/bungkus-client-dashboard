@@ -1,260 +1,214 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
+
+const navItems = [
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Orders',
+    href: '/orders',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Clients',
+    href: '/clients',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'QR Codes',
+    href: '/qr-generator',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'Shipments',
+    href: '/shipments',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.079-.481 1.035-1.099C20.893 12.204 18.698 6.75 14.25 6.75H5.25c-.621 0-1.125.504-1.125 1.125v9m16.5 0h-16.5" />
+      </svg>
+    ),
+  },
+];
 
 const DashboardLayout: React.FC = () => {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const navigation = [
-    { name: 'Dashboard', href: '/', icon: '🏠', color: 'from-purple-500 to-pink-500' },
-    { name: 'Orders', href: '/orders', icon: '🛍️', color: 'from-orange-500 to-red-500' },
-    { name: 'QR Generator', href: '/qr-generator', icon: '📱', color: 'from-blue-500 to-cyan-500' },
-    { name: 'Clients', href: '/clients', icon: '👥', color: 'from-green-500 to-emerald-500' },
-  ];
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    if (!isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
+  const userInitial = user?.name?.charAt(0)?.toUpperCase() || 'A';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-dark-50 via-white to-dark-100 dark:from-dark-900 dark:via-dark-800 dark:to-dark-900">
-      {/* Background Pattern */}
-      <div className="fixed inset-0 bg-hero-pattern opacity-[0.03] dark:opacity-[0.02] pointer-events-none"></div>
-      
-      {/* Animated Background Orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full filter blur-3xl opacity-10 dark:opacity-5"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div 
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full filter blur-3xl opacity-10 dark:opacity-5"
-          animate={{
-            x: [0, -100, 0],
-            y: [0, 50, 0],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      </div>
+    <div className="min-h-screen bg-[#0a0a1a] text-white font-sans">
+      {/* Sidebar */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.aside
+            initial={{ x: -260, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -260, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed inset-y-0 left-0 z-30 w-[260px] flex flex-col border-r border-white/[0.06] bg-[#111127]/80 backdrop-blur-xl"
+          >
+            {/* Logo */}
+            <div className="px-6 pt-7 pb-8">
+              <h1
+                className="font-display text-2xl font-bold tracking-widest"
+                style={{
+                  color: '#00f0ff',
+                  textShadow: '0 0 20px rgba(0,240,255,0.35)',
+                }}
+              >
+                BUNGKUS
+              </h1>
+              <p className="mt-1 text-[11px] tracking-[0.2em] uppercase text-white/30">
+                Admin Panel
+              </p>
+            </div>
 
-      <div className="relative flex h-screen">
-        {/* Sidebar */}
-        <AnimatePresence>
-          {isSidebarOpen && (
-            <motion.aside
-              initial={{ x: -300 }}
-              animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 left-0 z-30 w-64 overflow-y-auto"
-            >
-              <div className="h-full bg-white/80 dark:bg-dark-800/80 backdrop-blur-2xl border-r border-white/20 dark:border-dark-700/20">
-                <div className="p-6">
-                  {/* Logo */}
-                  <motion.div 
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-center space-x-3 mb-8"
+            {/* Navigation */}
+            <nav className="flex-1 px-3 space-y-1">
+              {navItems.map((item) => {
+                const isActive =
+                  location.pathname === item.href ||
+                  (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
+
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`
+                      relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200
+                      ${
+                        isActive
+                          ? 'text-[#00f0ff] bg-[#00f0ff]/[0.08]'
+                          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'
+                      }
+                    `}
                   >
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25">
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400">
-                        Bungkus Admin
-                      </h2>
-                      <p className="text-xs text-dark-500 dark:text-dark-400">Dashboard v2.0</p>
-                    </div>
-                  </motion.div>
-
-                  {/* Navigation */}
-                  <nav className="space-y-2">
-                    {navigation.map((item, index) => {
-                      const isActive = location.pathname === item.href;
-                      return (
-                        <motion.div
-                          key={item.name}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                        >
-                          <Link
-                            to={item.href}
-                            className={`
-                              relative flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300
-                              ${isActive 
-                                ? 'text-white' 
-                                : 'text-dark-600 dark:text-dark-400 hover:text-dark-900 dark:hover:text-white'
-                              }
-                            `}
-                          >
-                            {isActive && (
-                              <motion.div
-                                layoutId="activeNav"
-                                className={`absolute inset-0 bg-gradient-to-r ${item.color} rounded-xl shadow-lg`}
-                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                              />
-                            )}
-                            
-                            <div className={`
-                              relative flex items-center space-x-3 z-10
-                              ${!isActive && 'group-hover:translate-x-1 transition-transform duration-300'}
-                            `}>
-                              <span className={`text-2xl ${isActive ? 'animate-pulse' : ''}`}>
-                                {item.icon}
-                              </span>
-                              <span>{item.name}</span>
-                            </div>
-
-                            {isActive && (
-                              <motion.div
-                                className="absolute right-0 w-1 h-8 bg-white rounded-l-full"
-                                initial={{ scaleY: 0 }}
-                                animate={{ scaleY: 1 }}
-                                transition={{ duration: 0.2 }}
-                              />
-                            )}
-                          </Link>
-                        </motion.div>
-                      );
-                    })}
-                  </nav>
-                </div>
-
-                {/* Bottom Section */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
-                  {/* Dark Mode Toggle */}
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={toggleDarkMode}
-                    className="w-full flex items-center justify-between px-4 py-3 bg-dark-100/50 dark:bg-dark-700/50 rounded-xl transition-colors"
-                  >
-                    <span className="text-sm font-medium text-dark-700 dark:text-dark-300">
-                      Dark Mode
-                    </span>
-                    <div className="relative w-12 h-6 bg-dark-300 dark:bg-dark-600 rounded-full transition-colors">
+                    {/* Active indicator bar */}
+                    {isActive && (
                       <motion.div
-                        className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md"
-                        animate={{ x: isDarkMode ? 24 : 0 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        layoutId="sidebar-active"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#00f0ff]"
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
                       />
-                    </div>
-                  </motion.button>
+                    )}
+                    <span className={isActive ? 'text-[#00f0ff]' : 'text-white/40'}>
+                      {item.icon}
+                    </span>
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
 
-                  {/* User Profile */}
-                  <div className="p-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/25">
-                        A
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-dark-900 dark:text-white">Admin User</p>
-                        <p className="text-xs text-dark-500 dark:text-dark-400">admin@bungkus.com</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Logout Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                  >
-                    Logout
-                  </motion.button>
+            {/* Bottom: user + logout */}
+            <div className="px-4 pb-5 space-y-3">
+              {/* User pill */}
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#00f0ff]/30 to-purple-500/30 border border-[#00f0ff]/20 flex items-center justify-center text-xs font-bold text-[#00f0ff]">
+                  {userInitial}
                 </div>
-              </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* Main Content */}
-        <div className={`flex-1 flex flex-col ${isSidebarOpen ? 'pl-64' : 'pl-0'} transition-all duration-300`}>
-          {/* Top Bar */}
-          <header className="sticky top-0 z-20 bg-white/70 dark:bg-dark-800/70 backdrop-blur-xl border-b border-white/20 dark:border-dark-700/20">
-            <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center space-x-4">
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
-                >
-                  <svg className="w-6 h-6 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </motion.button>
-                
-                <div className="hidden sm:block">
-                  <p className="text-sm text-dark-500 dark:text-dark-400">
-                    {new Date().toLocaleDateString('en-US', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white/80 truncate">
+                    {user?.name || 'Admin'}
+                  </p>
+                  <p className="text-[11px] text-white/30 truncate">
+                    {user?.email || 'admin@bungkus.com'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3">
-                {/* Notifications */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="relative p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
-                >
-                  <svg className="w-6 h-6 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                </motion.button>
-
-                {/* Settings */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="p-2 hover:bg-dark-100/50 dark:hover:bg-dark-700/50 rounded-xl transition-colors"
-                >
-                  <svg className="w-6 h-6 text-dark-600 dark:text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </motion.button>
-              </div>
+              {/* Logout */}
+              <button
+                onClick={logout}
+                className="w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-white/40 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors duration-200"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+                <span>Logout</span>
+              </button>
             </div>
-          </header>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
-          {/* Page Content */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-6 lg:p-8">
-              <Outlet />
-            </div>
-          </main>
-        </div>
+      {/* Main wrapper */}
+      <div
+        className={`flex flex-col min-h-screen transition-all duration-300 ${
+          isSidebarOpen ? 'pl-[260px]' : 'pl-0'
+        }`}
+      >
+        {/* Top bar */}
+        <header className="sticky top-0 z-20 flex items-center justify-between h-14 px-5 border-b border-white/[0.06] bg-[#0a0a1a]/80 backdrop-blur-lg">
+          <div className="flex items-center gap-4">
+            {/* Hamburger */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 rounded-md text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+              </svg>
+            </button>
+
+            {/* Date */}
+            <span className="hidden sm:block text-xs text-white/30">{currentDate}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Notification bell */}
+            <button className="relative p-2 rounded-md text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#00f0ff]" />
+            </button>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="p-6 lg:p-8"
+          >
+            <Outlet />
+          </motion.div>
+        </main>
       </div>
     </div>
   );
