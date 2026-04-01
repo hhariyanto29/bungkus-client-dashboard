@@ -3,7 +3,6 @@ const router = express.Router();
 const crypto = require('crypto');
 const auth = require('../middleware/auth');
 const db = require('../config/database');
-const QRCode = require('qrcode');
 
 const PORTAL_BASE_URL = process.env.PORTAL_BASE_URL || 'http://localhost:3002';
 
@@ -65,12 +64,10 @@ router.get('/', auth.requireAdmin, async (req, res) => {
 
     const qrCodes = await db.query(query, params);
 
-    // Generate QR images
-    const result = await Promise.all(qrCodes.map(async (qr) => {
+    const result = qrCodes.map((qr) => {
       const portalUrl = `${PORTAL_BASE_URL}/${qr.secret_hash}`;
-      const qrImage = await QRCode.toDataURL(portalUrl, { width: 300, margin: 2 });
-      return { ...qr, portal_url: portalUrl, qr_image: qrImage };
-    }));
+      return { ...qr, portal_url: portalUrl };
+    });
 
     res.json({ success: true, count: result.length, data: result });
   } catch (error) {
@@ -87,11 +84,10 @@ router.get('/order/:orderId', async (req, res) => {
       [req.params.orderId]
     );
 
-    const result = await Promise.all(qrCodes.map(async (qr) => {
+    const result = qrCodes.map((qr) => {
       const portalUrl = `${PORTAL_BASE_URL}/${qr.secret_hash}`;
-      const qrImage = await QRCode.toDataURL(portalUrl, { width: 300, margin: 2 });
-      return { ...qr, portal_url: portalUrl, qr_image: qrImage };
-    }));
+      return { ...qr, portal_url: portalUrl };
+    });
 
     res.json({ success: true, count: result.length, data: result });
   } catch (error) {
@@ -127,7 +123,6 @@ router.post('/generate/:orderId', async (req, res) => {
     );
 
     const portalUrl = `${PORTAL_BASE_URL}/${secretHash}`;
-    const qrImage = await QRCode.toDataURL(portalUrl, { width: 400, margin: 2 });
 
     const qr = await db.get('SELECT * FROM qr_codes WHERE id = ?', [result.id]);
 
@@ -137,7 +132,6 @@ router.post('/generate/:orderId', async (req, res) => {
       data: {
         ...qr,
         portal_url: portalUrl,
-        qr_image: qrImage,
         order_number: order.order_number,
         client_name: order.client_name
       }
@@ -223,13 +217,12 @@ router.post('/:id/regenerate', async (req, res) => {
     );
 
     const portalUrl = `${PORTAL_BASE_URL}/${secretHash}`;
-    const qrImage = await QRCode.toDataURL(portalUrl, { width: 400, margin: 2 });
     const qr = await db.get('SELECT * FROM qr_codes WHERE id = ?', [result.id]);
 
     res.status(201).json({
       success: true,
       message: 'QR code regenerated (old code deactivated)',
-      data: { ...qr, portal_url: portalUrl, qr_image: qrImage }
+      data: { ...qr, portal_url: portalUrl }
     });
   } catch (error) {
     console.error('Regenerate QR error:', error);

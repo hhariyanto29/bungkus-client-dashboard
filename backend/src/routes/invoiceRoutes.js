@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/database');
+const { generateInvoicePDF, generateTaxInvoicePDF } = require('../utils/pdfGenerator');
 
 router.use(auth.verifyToken);
 
@@ -184,6 +185,62 @@ router.delete('/:id', auth.requireAdmin, async (req, res) => {
   } catch (error) {
     console.error('Delete invoice error:', error);
     res.status(500).json({ success: false, error: 'Failed to delete invoice' });
+  }
+});
+
+// Download invoice PDF (admin)
+router.get('/:id/pdf', auth.requireAdmin, async (req, res) => {
+  try {
+    const invoice = await db.get(`
+      SELECT i.*, o.order_number, o.due_date, c.name as client_name, c.company_name,
+             c.address as client_address, c.npwp as client_npwp
+      FROM invoices i
+      LEFT JOIN orders o ON i.order_id = o.id
+      LEFT JOIN clients c ON o.client_id = c.id
+      WHERE i.id = ?
+    `, [req.params.id]);
+
+    if (!invoice) return res.status(404).json({ success: false, error: 'Invoice not found' });
+
+    const items = await db.query(
+      'SELECT item_name, description, quantity, unit_price, total_price FROM order_items WHERE order_id = ?',
+      [invoice.order_id]
+    );
+
+    const pdfBuffer = await generateInvoicePDF(invoice, items);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoice_number}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Invoice PDF error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate PDF' });
+  }
+});
+
+// Download tax invoice PDF (admin)
+router.get('/:orderId/tax-invoice/pdf', auth.requireAdmin, async (req, res) => {
+  try {
+    const taxInvoice = await db.get(`
+      SELECT ti.*, o.order_number, o.subtotal, o.total_amount
+      FROM tax_invoices ti
+      LEFT JOIN orders o ON ti.order_id = o.id
+      WHERE ti.order_id = ?
+    `, [req.params.orderId]);
+
+    if (!taxInvoice) return res.status(404).json({ success: false, error: 'Tax invoice not found' });
+
+    const items = await db.query(
+      'SELECT item_name, quantity, unit_price, total_price FROM order_items WHERE order_id = ?',
+      [req.params.orderId]
+    );
+
+    const pdfBuffer = await generateTaxInvoicePDF(taxInvoice, items);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${taxInvoice.faktur_number}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Tax invoice PDF error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate PDF' });
   }
 });
 

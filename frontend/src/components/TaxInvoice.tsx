@@ -6,6 +6,8 @@ interface TaxInvoiceProps {
   secretHash: string;
 }
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
 const TaxInvoice: React.FC<TaxInvoiceProps> = ({ secretHash }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['portal', secretHash, 'tax-invoice'],
@@ -97,6 +99,18 @@ const TaxInvoice: React.FC<TaxInvoiceProps> = ({ secretHash }) => {
           </div>
         </div>
       </div>
+
+      {/* Download Button */}
+      <a
+        href={`${API_BASE}/portal/${secretHash}/tax-invoice/pdf`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full py-3 text-center bg-cyan-500/20 text-cyan-400 border border-cyan-500/30
+                   rounded-xl hover:bg-cyan-500/30 hover:border-cyan-500/50 transition-all duration-200
+                   font-display font-semibold tracking-wider text-sm no-print"
+      >
+        DOWNLOAD PDF
+      </a>
 
       {/* Legal Notice */}
       <div className="glass rounded-2xl p-4">

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
+const { generateInvoicePDF, generateTaxInvoicePDF } = require('../utils/pdfGenerator');
 
 // PUBLIC routes - no authentication required
 // These are accessed by clients after scanning QR code
@@ -244,6 +245,78 @@ router.get('/:secretHash/tax-invoice', async (req, res) => {
   } catch (error) {
     console.error('Portal tax invoice error:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Download invoice as PDF
+router.get('/:secretHash/invoice/pdf', async (req, res) => {
+  try {
+    const result = await validateAccess(req.params.secretHash, req, 'download_invoice');
+    if (result.error) {
+      return res.status(result.status).json({ success: false, error: result.error });
+    }
+
+    const invoice = await db.get(`
+      SELECT i.*, o.order_number, o.due_date, c.name as client_name, c.company_name,
+             c.address as client_address, c.npwp as client_npwp
+      FROM invoices i
+      LEFT JOIN orders o ON i.order_id = o.id
+      LEFT JOIN clients c ON o.client_id = c.id
+      WHERE i.order_id = ?
+    `, [result.qr.order_id]);
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, error: 'Invoice not available' });
+    }
+
+    const items = await db.query(
+      'SELECT item_name, description, quantity, unit_price, total_price FROM order_items WHERE order_id = ?',
+      [result.qr.order_id]
+    );
+
+    const pdfBuffer = await generateInvoicePDF(invoice, items);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoice_number}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Portal invoice PDF error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate PDF' });
+  }
+});
+
+// Download tax invoice as PDF
+router.get('/:secretHash/tax-invoice/pdf', async (req, res) => {
+  try {
+    const result = await validateAccess(req.params.secretHash, req, 'download_tax_invoice');
+    if (result.error) {
+      return res.status(result.status).json({ success: false, error: result.error });
+    }
+
+    const taxInvoice = await db.get(`
+      SELECT ti.*, o.order_number, o.subtotal, o.total_amount
+      FROM tax_invoices ti
+      LEFT JOIN orders o ON ti.order_id = o.id
+      WHERE ti.order_id = ?
+    `, [result.qr.order_id]);
+
+    if (!taxInvoice) {
+      return res.status(404).json({ success: false, error: 'Tax invoice not available' });
+    }
+
+    const items = await db.query(
+      'SELECT item_name, quantity, unit_price, total_price FROM order_items WHERE order_id = ?',
+      [result.qr.order_id]
+    );
+
+    const pdfBuffer = await generateTaxInvoicePDF(taxInvoice, items);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${taxInvoice.faktur_number}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Portal tax invoice PDF error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate PDF' });
   }
 });
 

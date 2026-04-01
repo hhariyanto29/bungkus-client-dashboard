@@ -6,6 +6,8 @@ interface InvoiceProps {
   secretHash: string;
 }
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+
 const Invoice: React.FC<InvoiceProps> = ({ secretHash }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['portal', secretHash, 'invoice'],
@@ -111,6 +113,18 @@ const Invoice: React.FC<InvoiceProps> = ({ secretHash }) => {
           </div>
         </div>
       </div>
+
+      {/* Download Button */}
+      <a
+        href={`${API_BASE}/portal/${secretHash}/invoice/pdf`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full py-3 text-center bg-cyan-500/20 text-cyan-400 border border-cyan-500/30
+                   rounded-xl hover:bg-cyan-500/30 hover:border-cyan-500/50 transition-all duration-200
+                   font-display font-semibold tracking-wider text-sm no-print"
+      >
+        DOWNLOAD PDF
+      </a>
 
       {/* Company Info */}
       <div className="glass rounded-2xl p-4">

@@ -2,7 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "frontend",
+      "name": "backend",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nodemon", "server.js"],
+      "port": 3001,
+      "cwd": "/tmp/bungkus-client-dashboard/backend"
+    },
+    {
+      "name": "admin",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
       "port": 3000,
@@ -12,7 +19,17 @@
       }
     },
     {
-      "name": "portal",
+      "name": "admin-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 3000,
+      "cwd": "/tmp/bungkus-client-dashboard/admin-dashboard",
+      "env": {
+        "PUBLIC_URL": "/"
+      }
+    },
+    {
+      "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
       "port": 3002,
