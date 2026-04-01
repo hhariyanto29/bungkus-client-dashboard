@@ -51,7 +51,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'Bungkus Backend API',
     version: '2.0.0',
-    database: 'SQLite'
+    database: process.env.DB_TYPE || 'sqlite'
   });
 });
 

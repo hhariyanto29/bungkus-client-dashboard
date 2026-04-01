@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -66,9 +67,8 @@ const authMiddleware = {
         return { valid: false, error: 'User not found' };
       }
 
-      // In production, use bcrypt to compare hashed passwords
-      // For now, simple comparison (change in production)
-      if (user.password_hash !== password) {
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) {
         return { valid: false, error: 'Invalid password' };
       }
 
